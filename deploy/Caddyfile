@@ -1,0 +1,6 @@
+# Vultr Cloud Compute: Caddy terminates HTTPS (automatic Let's Encrypt) and proxies to Next.js.
+# Replace the domain, point its DNS A record at the server, then: sudo caddy reload --config /etc/caddy/Caddyfile
+orbitstudy.example.com {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:3000
+}
