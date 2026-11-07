@@ -8,7 +8,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 Category = Literal[
-    "algebra", "calculus", "statistics", "physics", "chemistry", "biology",
+    "algebra", "calculus", "statistics", "probability", "physics", "chemistry", "biology",
     "computer_science", "english", "history", "other",
 ]
 
