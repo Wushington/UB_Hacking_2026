@@ -198,3 +198,6 @@ npm-debug.log*
 
 # The Python template above ignores every lib/ directory; the app's src/lib must be tracked.
 !src/lib/
+
+# Clerk CLI / keyless-mode claim files (contain app credentials)
+.clerk/
