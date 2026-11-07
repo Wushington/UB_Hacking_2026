@@ -92,7 +92,7 @@ export function AccountMenu() {
             {initials(user)}
           </span>
         )}
-        <span className="text-[13px] leading-[1.5] whitespace-nowrap text-[#e8e6ff]">{name}</span>
+        <span className="hidden text-[13px] leading-[1.5] whitespace-nowrap text-[#e8e6ff] sm:inline">{name}</span>
         <span className="relative h-[6px] w-[10px] shrink-0">
           <Image
             src="/figma/explain-aloud/account-menu.svg"

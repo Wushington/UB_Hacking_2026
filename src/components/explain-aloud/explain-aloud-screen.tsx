@@ -79,7 +79,9 @@ function copyFor(section: keyof typeof EMPTY_COPY, state: ExplainAloudState) {
 }
 
 const cardClass =
-  "flex w-full flex-col gap-5 overflow-clip rounded-[22px] bg-[#161730] p-7 shadow-[0px_6px_24px_0px_rgba(0,0,0,0.13)]";
+  "flex w-full min-w-0 flex-col gap-5 overflow-clip rounded-[18px] bg-[#161730] p-5 shadow-[0px_6px_24px_0px_rgba(0,0,0,0.13)] sm:rounded-[22px] sm:p-7";
+/** Page gutters: 16px on phones up to the design's 56px at xl. */
+const gutterClass = "px-4 sm:px-6 lg:px-10 xl:px-14";
 const eyebrowClass = "text-[10px] font-semibold tracking-[1.5px] whitespace-nowrap text-[#9496bf]";
 
 function formatTime(seconds: number) {
@@ -159,7 +161,7 @@ function RecordingPlayer({ recording }: { recording: NonNullable<ExplainAloudVie
       >
         <Icon name="play" width={18} height={18} />
       </button>
-      <div className="flex h-[42px] min-w-px flex-1 items-center gap-1 overflow-clip" aria-hidden>
+      <div className="flex h-[42px] min-w-0 flex-1 items-center gap-1 overflow-clip" aria-hidden>
         {WAVEFORM.map((h, i) => (
           <div
             key={i}
@@ -205,24 +207,32 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
   const covered = feedback?.covered ?? [];
 
   return (
-    <div className={cn("relative isolate flex min-h-[1080px] w-full flex-col overflow-hidden bg-[#0d0e2a] text-white", className)}>
-      {/* Decorative background layers */}
+    <div className={cn("relative isolate flex min-h-dvh w-full flex-col overflow-hidden bg-[#0d0e2a] text-white", className)}>
+      {/* Decorative background layers (bottom-anchored so they stay at the foot of taller mobile pages) */}
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute top-0 left-0 h-[1080px] w-full min-w-[1440px]">
           <Image src={`${ASSETS}/star-field.svg`} alt="" fill className="block max-w-none" />
         </div>
-        <div className="absolute top-[760px] left-0 h-[440px] w-full min-w-[1440px] opacity-24">
+        <div className="absolute bottom-[-120px] left-0 h-[440px] w-full min-w-[1440px] opacity-24">
           <Image src={`${ASSETS}/lunar-atmosphere.jpg`} alt="" fill sizes="100vw" className="object-cover" />
         </div>
-        <div className="absolute top-[760px] left-0 h-[280px] w-full bg-gradient-to-b from-[#0d0e2a] to-[rgba(13,14,42,0)]" />
+        <div className="absolute bottom-[40px] left-0 h-[280px] w-full bg-gradient-to-b from-[#0d0e2a] to-[rgba(13,14,42,0)]" />
       </div>
 
       {/* Navigation */}
-      <header className="flex h-20 w-full shrink-0 items-center justify-between border-b border-[rgba(42,43,80,0.25)] bg-[rgba(19,20,48,0.5)] px-14">
-        <Link href="/" className="text-[23px] font-bold tracking-[-0.9px] whitespace-nowrap">
+      <header
+        className={cn(
+          "flex w-full shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[rgba(42,43,80,0.25)] bg-[rgba(19,20,48,0.5)] py-3 lg:h-20 lg:flex-nowrap lg:py-0",
+          gutterClass,
+        )}
+      >
+        <Link href="/" className="text-[20px] font-bold tracking-[-0.9px] whitespace-nowrap sm:text-[23px]">
           Orbit Study
         </Link>
-        <nav aria-label="Main" className="flex items-center gap-2">
+        <nav
+          aria-label="Main"
+          className="-mx-1 order-last flex w-full items-center gap-2 overflow-x-auto px-1 lg:order-none lg:mx-0 lg:w-auto lg:overflow-visible lg:px-0"
+        >
           {NAV_ITEMS.map((item) => {
             const active = "active" in item && item.active;
             return (
@@ -231,7 +241,7 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "rounded-full px-[17px] py-[11px] text-[13px] leading-[1.5] whitespace-nowrap transition-colors",
+                  "shrink-0 rounded-full px-[14px] py-[8px] text-[13px] leading-[1.5] whitespace-nowrap transition-colors lg:px-[17px] lg:py-[11px]",
                   active ? "bg-[#ff5e7a] font-semibold text-white" : "text-[#9496bf] hover:text-white",
                 )}
               >
@@ -240,7 +250,7 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
             );
           })}
         </nav>
-        <div className="flex items-center gap-[22px]">
+        <div className="flex items-center gap-4 lg:gap-[22px]">
           <button type="button" aria-label="Search" className="relative size-[18px] shrink-0">
             <Icon name="search" width={16} height={16} className="absolute top-0 left-0" />
           </button>
@@ -252,28 +262,33 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
       </header>
 
       {/* Workspace */}
-      <div className="flex min-h-[906px] w-full flex-col gap-7 px-14 pt-9 pb-8" aria-busy={state === "loading"}>
-        <div className="flex w-full items-center justify-between">
-          <div className="flex flex-col gap-2">
+      <div
+        className={cn("flex w-full flex-1 flex-col gap-6 pt-7 pb-8 sm:gap-7 sm:pt-9", gutterClass)}
+        aria-busy={state === "loading"}
+      >
+        <div className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <div className="flex min-w-0 flex-col gap-2">
             <p className={eyebrowClass}>05 / SAY IT. UNDERSTAND IT.</p>
-            <h1 className="text-[36px] font-medium tracking-[-1.3px]">{intro.heading}</h1>
-            <p className="text-[14px] leading-[1.5] text-[#9496bf]">{intro.body}</p>
+            <h1 className="text-[28px] leading-[1.15] font-medium tracking-[-1.3px] text-balance sm:text-[32px] lg:text-[36px]">
+              {intro.heading}
+            </h1>
+            <p className="text-[14px] leading-[1.5] text-pretty text-[#9496bf]">{intro.body}</p>
           </div>
           {course ? <Pill>{course}</Pill> : null}
         </div>
 
-        <div className="flex w-full items-start gap-6">
+        <div className="grid w-full grid-cols-1 items-start gap-[22px] lg:grid-cols-[minmax(0,636fr)_minmax(0,668fr)] lg:gap-6">
           {/* Left column */}
-          <div className="flex w-[636px] shrink-0 flex-col gap-[22px]">
+          <div className="flex w-full min-w-0 flex-col gap-[22px]">
             <section aria-label="Practice attempt" className={cardClass}>
-              <div className="flex w-full items-start justify-between">
+              <div className="flex w-full flex-wrap items-start justify-between gap-2">
                 <p className={eyebrowClass}>YOUR SELECTED CONCEPT</p>
                 {concept?.attemptLabel ? <Pill tone={attemptTone(state)}>{concept.attemptLabel}</Pill> : null}
               </div>
               {concept ? (
                 <>
                   <div className="flex flex-col gap-2 leading-[1.5]">
-                    <h2 className="text-[26px] font-medium">{concept.title}</h2>
+                    <h2 className="text-[22px] font-medium break-words sm:text-[26px]">{concept.title}</h2>
                     {concept.breadcrumb ? <p className="text-[12px] text-[#9496bf]">{concept.breadcrumb}</p> : null}
                   </div>
                   {concept.prompt ? (
@@ -290,12 +305,12 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
             </section>
 
             <section aria-label="Spoken response" className={cardClass}>
-              <div className="flex w-full items-start justify-between">
-                <h2 className="text-[19px] leading-[1.5] font-medium">In your own words</h2>
+              <div className="flex w-full flex-wrap items-start justify-between gap-2">
+                <h2 className="text-[17px] leading-[1.5] font-medium sm:text-[19px]">In your own words</h2>
                 <Pill>Transcript</Pill>
               </div>
               {transcript ? (
-                <p className="w-full text-[17px] leading-[1.85] text-[#c1bedf]">“{transcript}”</p>
+                <p className="w-full text-[15px] leading-[1.85] break-words text-[#c1bedf] sm:text-[17px]">“{transcript}”</p>
               ) : (
                 <Placeholder>{copyFor("transcript", state)}</Placeholder>
               )}
@@ -306,7 +321,7 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
               ) : null}
             </section>
 
-            <div className="flex w-full items-center justify-between">
+            <div className="flex w-full flex-col-reverse items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
               <Link href={backHref} className="text-[12px] leading-[1.5] text-[#ff5e7a] hover:underline">
                 ← Back to weak concepts
               </Link>
@@ -314,7 +329,7 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
                 type="button"
                 onClick={onRecordAgain}
                 disabled={state === "signed-out" || state === "loading"}
-                className="flex h-[46px] items-center justify-center gap-[9px] rounded-[12px] bg-[#ff5e7a] px-[18px] text-[13px] leading-[1.5] font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#ff7790] disabled:cursor-default disabled:opacity-50 disabled:hover:bg-[#ff5e7a]"
+                className="flex h-[46px] w-full items-center justify-center gap-[9px] rounded-[12px] sm:w-auto bg-[#ff5e7a] px-[18px] text-[13px] leading-[1.5] font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#ff7790] disabled:cursor-default disabled:opacity-50 disabled:hover:bg-[#ff5e7a]"
               >
                 <Icon name="mic" width={18} height={18} />
                 {hasAttempt ? "Record another attempt" : "Record an explanation"}
@@ -323,11 +338,11 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
           </div>
 
           {/* AI feedback */}
-          <section aria-label="AI feedback" className={cn(cardClass, "min-w-px flex-1")}>
-            <div className="flex w-full items-center justify-between">
+          <section aria-label="AI feedback" className={cardClass}>
+            <div className="flex w-full flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
                 <Icon name="sparkles" width={22} height={22} />
-                <h2 className="text-[21px] leading-[1.5] font-medium whitespace-nowrap">A little feedback from AI</h2>
+                <h2 className="text-[18px] leading-[1.5] font-medium sm:text-[21px]">A little feedback from AI</h2>
               </div>
               <FeedbackStatus state={state} />
             </div>
@@ -385,21 +400,21 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
       </div>
 
       {/* Learning loop */}
-      <div className="flex w-full px-14 pb-9">
+      <div className={cn("flex w-full pb-6 sm:pb-9", gutterClass)}>
         <nav
           aria-label="Learning loop"
-          className="flex h-[58px] min-w-px flex-1 items-center justify-between rounded-[22px] bg-[rgba(19,20,48,0.69)] px-[22px]"
+          className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto rounded-[18px] bg-[rgba(19,20,48,0.69)] px-[22px] py-4 sm:rounded-[22px] xl:h-[58px] xl:justify-between xl:py-0"
         >
-          <p className={eyebrowClass}>IT ALL CONNECTS</p>
+          <p className={cn(eyebrowClass, "shrink-0")}>IT ALL CONNECTS</p>
           {LEARNING_STEPS.map((step, i) => {
             const last = i === LEARNING_STEPS.length - 1;
             const label = `${String(i + 1).padStart(2, "0")}  /  ${step}`;
             return last ? (
-              <p key={step} aria-current="step" className="text-[11px] leading-[1.5] font-semibold whitespace-pre text-[#ff5e7a]">
+              <p key={step} aria-current="step" className="shrink-0 text-[11px] leading-[1.5] font-semibold whitespace-pre text-[#ff5e7a]">
                 {label}
               </p>
             ) : (
-              <div key={step} className="flex items-center gap-2.5 leading-[1.5] text-[#9496bf]">
+              <div key={step} className="flex shrink-0 items-center gap-2.5 leading-[1.5] text-[#9496bf]">
                 <p className="text-[11px] whitespace-pre">{label}</p>
                 <span aria-hidden className="text-[14px]">
                   →
