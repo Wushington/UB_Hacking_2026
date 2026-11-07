@@ -3,41 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
+import type { ExplainAloudState, ExplainAloudView } from "@/lib/explain-aloud/view";
 import { cn } from "@/lib/utils";
 import { AccountMenu } from "./account-menu";
 
 const ASSETS = "/figma/explain-aloud";
 
-export type ExplainAloudGap = { title: string; detail: string };
-
-export type ExplainAloudData = {
-  /** Course chip in the page introduction, e.g. "Cell Biology · BIO 201". */
-  course: string;
-  concept: {
-    title: string;
-    breadcrumb: string;
-    prompt: string;
-    attemptLabel: string;
-  };
-  recording: {
-    /** Total length in seconds; used for the time label when no audio is loaded yet. */
-    durationSeconds: number;
-    audioSrc?: string;
-    /** Bar heights in px (max 42). */
-    waveform: number[];
-    /** Fraction of bars shown as played before playback starts (0–1). */
-    initialProgress?: number;
-  };
-  transcript: { text: string; footnote: string };
-  feedback: {
-    summary: string;
-    covered: string[];
-    gaps: ExplainAloudGap[];
-    nextStep: { label: string; text: string; reviewLabel: string; reviewHref?: string; listStatus: string };
-  };
-};
-
-export type ExplainAloudScreenProps = ExplainAloudData & {
+export type ExplainAloudScreenProps = {
+  view: ExplainAloudView;
   className?: string;
   backHref?: string;
   onRecordAgain?: () => void;
@@ -52,6 +25,59 @@ const NAV_ITEMS = [
 
 const LEARNING_STEPS = ["Capture a class", "Organize notes", "Take a quiz", "Find the gaps", "Explain & improve"];
 
+/** Decorative waveform shape (no amplitude data is stored); playback colors it. */
+const WAVEFORM = [
+  8, 14, 22, 12, 30, 20, 36, 27, 16, 24, 34, 18, 28, 12, 20, 31, 40, 26, 14, 22, 30, 16, 10, 24, 34, 20, 14, 26, 18, 10, 15,
+  8,
+];
+
+const INTRO: Record<ExplainAloudState, { heading: string; body: string }> = {
+  ready: {
+    heading: "You’re making the connections.",
+    body: "Your explanation is complete. Here’s what landed, and what to try next.",
+  },
+  "no-feedback": {
+    heading: "Your explanation is saved.",
+    body: "Feedback isn’t available for this attempt yet.",
+  },
+  processing: {
+    heading: "Listening back to your explanation.",
+    body: "Your transcript and feedback will appear here once analysis finishes.",
+  },
+  failed: {
+    heading: "We couldn’t analyze that attempt.",
+    body: "Try recording your explanation again.",
+  },
+  empty: {
+    heading: "Explain a concept out loud.",
+    body: "Record an explanation to see what landed and what to try next.",
+  },
+  "signed-out": {
+    heading: "Explain a concept out loud.",
+    body: "Sign in to see your explanations and feedback.",
+  },
+  loading: { heading: "Loading your explanation…", body: "Just a moment." },
+};
+
+const EMPTY_COPY: Record<"concept" | "transcript", Partial<Record<ExplainAloudState, string>> & { default: string }> = {
+  concept: {
+    "signed-out": "Sign in to see the concept you practiced.",
+    loading: "Loading…",
+    default: "No explanation recorded yet. Pick a weak concept and explain it in your own words.",
+  },
+  transcript: {
+    "signed-out": "Sign in to see your transcript.",
+    loading: "Loading…",
+    processing: "Your transcript will appear here after your explanation is processed.",
+    failed: "No transcript. This attempt couldn’t be processed.",
+    default: "Your words will appear here after you record an explanation.",
+  },
+};
+
+function copyFor(section: keyof typeof EMPTY_COPY, state: ExplainAloudState) {
+  return EMPTY_COPY[section][state] ?? EMPTY_COPY[section].default;
+}
+
 const cardClass =
   "flex w-full flex-col gap-5 overflow-clip rounded-[22px] bg-[#161730] p-7 shadow-[0px_6px_24px_0px_rgba(0,0,0,0.13)]";
 const eyebrowClass = "text-[10px] font-semibold tracking-[1.5px] whitespace-nowrap text-[#9496bf]";
@@ -61,12 +87,16 @@ function formatTime(seconds: number) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-function Pill({ tone = "neutral", children }: { tone?: "neutral" | "success"; children: ReactNode }) {
+type PillTone = "neutral" | "success" | "danger";
+
+function Pill({ tone = "neutral", children }: { tone?: PillTone; children: ReactNode }) {
   return (
     <span
       className={cn(
         "inline-flex shrink-0 rounded-full px-2.5 py-[5px] text-[11px] leading-[1.5] whitespace-nowrap",
-        tone === "success" ? "bg-[#163d38] text-[#4ecba0]" : "bg-[#1e1f45] text-[#c1bedf]",
+        tone === "success" && "bg-[#163d38] text-[#4ecba0]",
+        tone === "danger" && "bg-[#281d35] text-[#ff5e7a]",
+        tone === "neutral" && "bg-[#1e1f45] text-[#c1bedf]",
       )}
     >
       {children}
@@ -74,20 +104,41 @@ function Pill({ tone = "neutral", children }: { tone?: "neutral" | "success"; ch
   );
 }
 
+/** Empty-section placeholder that sits inside the dark cards. */
+function Placeholder({ children, bordered = true }: { children: ReactNode; bordered?: boolean }) {
+  return (
+    <p
+      data-placeholder
+      className={cn(
+        "w-full text-[13px] leading-[1.5] text-[#9496bf]",
+        bordered && "rounded-[12px] border border-dashed border-[#333564] px-5 py-6 text-center",
+      )}
+    >
+      {children}
+    </p>
+  );
+}
+
 function Icon({ name, width, height, className }: { name: string; width: number; height: number; className?: string }) {
   return <Image src={`${ASSETS}/${name}.svg`} alt="" width={width} height={height} className={cn("block max-w-none", className)} />;
 }
 
-function RecordingPlayer({ recording }: { recording: ExplainAloudData["recording"] }) {
+function attemptTone(state: ExplainAloudState): PillTone {
+  if (state === "failed") return "danger";
+  if (state === "processing") return "neutral";
+  return "success";
+}
+
+function RecordingPlayer({ recording }: { recording: NonNullable<ExplainAloudView["recording"]> | null }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(recording.durationSeconds);
-  const hasAudio = Boolean(recording.audioSrc);
+  const [loadedDuration, setLoadedDuration] = useState<number | null>(null);
+  const audioSrc = recording?.audioSrc ?? null;
+  const duration = loadedDuration ?? recording?.durationSeconds ?? null;
 
-  const progress =
-    hasAudio && currentTime > 0 && duration > 0 ? currentTime / duration : (recording.initialProgress ?? 0);
-  const playedBars = Math.round(progress * recording.waveform.length);
+  const progress = duration && duration > 0 ? currentTime / duration : 0;
+  const playedBars = Math.round(progress * WAVEFORM.length);
 
   function toggle() {
     const audio = audioRef.current;
@@ -101,14 +152,15 @@ function RecordingPlayer({ recording }: { recording: ExplainAloudData["recording
       <button
         type="button"
         onClick={toggle}
-        disabled={!hasAudio}
+        disabled={!audioSrc}
         aria-label={playing ? "Pause recording" : "Play recording"}
-        className="flex size-[42px] shrink-0 items-center justify-center rounded-full bg-[#1e1f45] transition-colors hover:bg-[#2a2b5a] disabled:cursor-default disabled:hover:bg-[#1e1f45]"
+        title={audioSrc ? undefined : "Recording unavailable"}
+        className="flex size-[42px] shrink-0 items-center justify-center rounded-full bg-[#1e1f45] transition-colors hover:bg-[#2a2b5a] disabled:cursor-default disabled:opacity-50 disabled:hover:bg-[#1e1f45]"
       >
         <Icon name="play" width={18} height={18} />
       </button>
       <div className="flex h-[42px] min-w-px flex-1 items-center gap-1 overflow-clip" aria-hidden>
-        {recording.waveform.map((h, i) => (
+        {WAVEFORM.map((h, i) => (
           <div
             key={i}
             className={cn("w-[3px] shrink-0 rounded-[3px]", i < playedBars ? "bg-[#ff5e7a]" : "bg-[#333564]")}
@@ -117,12 +169,12 @@ function RecordingPlayer({ recording }: { recording: ExplainAloudData["recording
         ))}
       </div>
       <p className="shrink-0 text-[12px] leading-[1.5] whitespace-nowrap text-[#9496bf]">
-        {formatTime(currentTime)} / {formatTime(duration)}
+        {formatTime(currentTime)} / {duration != null ? formatTime(duration) : "–:–"}
       </p>
-      {hasAudio ? (
+      {audioSrc ? (
         <audio
           ref={audioRef}
-          src={recording.audioSrc}
+          src={audioSrc}
           preload="metadata"
           className="hidden"
           onPlay={() => setPlaying(true)}
@@ -130,7 +182,7 @@ function RecordingPlayer({ recording }: { recording: ExplainAloudData["recording
           onEnded={() => setPlaying(false)}
           onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
           onLoadedMetadata={(e) => {
-            if (Number.isFinite(e.currentTarget.duration)) setDuration(e.currentTarget.duration);
+            if (Number.isFinite(e.currentTarget.duration)) setLoadedDuration(e.currentTarget.duration);
           }}
         />
       ) : null}
@@ -138,16 +190,20 @@ function RecordingPlayer({ recording }: { recording: ExplainAloudData["recording
   );
 }
 
-export function ExplainAloudScreen({
-  course,
-  concept,
-  recording,
-  transcript,
-  feedback,
-  className,
-  backHref = "/weak-concepts",
-  onRecordAgain,
-}: ExplainAloudScreenProps) {
+function FeedbackStatus({ state }: { state: ExplainAloudState }) {
+  if (state === "ready") return <Pill tone="success">Analysis complete</Pill>;
+  if (state === "processing") return <Pill>Analyzing…</Pill>;
+  if (state === "failed") return <Pill tone="danger">Analysis failed</Pill>;
+  return null;
+}
+
+export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts", onRecordAgain }: ExplainAloudScreenProps) {
+  const { state, course, concept, recording, transcript, recordedLabel, feedback } = view;
+  const intro = INTRO[state];
+  const hasAttempt = concept !== null;
+  const gaps = feedback?.gaps ?? [];
+  const covered = feedback?.covered ?? [];
+
   return (
     <div className={cn("relative isolate flex min-h-[1080px] w-full flex-col overflow-hidden bg-[#0d0e2a] text-white", className)}>
       {/* Decorative background layers */}
@@ -196,16 +252,14 @@ export function ExplainAloudScreen({
       </header>
 
       {/* Workspace */}
-      <div className="flex min-h-[906px] w-full flex-col gap-7 px-14 pt-9 pb-8">
+      <div className="flex min-h-[906px] w-full flex-col gap-7 px-14 pt-9 pb-8" aria-busy={state === "loading"}>
         <div className="flex w-full items-center justify-between">
           <div className="flex flex-col gap-2">
             <p className={eyebrowClass}>05 / SAY IT. UNDERSTAND IT.</p>
-            <h1 className="text-[36px] font-medium tracking-[-1.3px]">You’re making the connections.</h1>
-            <p className="text-[14px] leading-[1.5] text-[#9496bf]">
-              Your explanation is complete. Here’s what landed, and what to try next.
-            </p>
+            <h1 className="text-[36px] font-medium tracking-[-1.3px]">{intro.heading}</h1>
+            <p className="text-[14px] leading-[1.5] text-[#9496bf]">{intro.body}</p>
           </div>
-          <Pill>{course}</Pill>
+          {course ? <Pill>{course}</Pill> : null}
         </div>
 
         <div className="flex w-full items-start gap-6">
@@ -214,15 +268,25 @@ export function ExplainAloudScreen({
             <section aria-label="Practice attempt" className={cardClass}>
               <div className="flex w-full items-start justify-between">
                 <p className={eyebrowClass}>YOUR SELECTED CONCEPT</p>
-                <Pill tone="success">{concept.attemptLabel}</Pill>
+                {concept?.attemptLabel ? <Pill tone={attemptTone(state)}>{concept.attemptLabel}</Pill> : null}
               </div>
-              <div className="flex flex-col gap-2 leading-[1.5]">
-                <h2 className="text-[26px] font-medium">{concept.title}</h2>
-                <p className="text-[12px] text-[#9496bf]">{concept.breadcrumb}</p>
-              </div>
-              <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">“{concept.prompt}”</p>
-              <div className="h-px w-full bg-[#333564]" />
-              <RecordingPlayer recording={recording} />
+              {concept ? (
+                <>
+                  <div className="flex flex-col gap-2 leading-[1.5]">
+                    <h2 className="text-[26px] font-medium">{concept.title}</h2>
+                    {concept.breadcrumb ? <p className="text-[12px] text-[#9496bf]">{concept.breadcrumb}</p> : null}
+                  </div>
+                  {concept.prompt ? (
+                    <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">“{concept.prompt}”</p>
+                  ) : (
+                    <Placeholder bordered={false}>No question prompt saved for this attempt.</Placeholder>
+                  )}
+                  <div className="h-px w-full bg-[#333564]" />
+                  <RecordingPlayer recording={recording} />
+                </>
+              ) : (
+                <Placeholder>{copyFor("concept", state)}</Placeholder>
+              )}
             </section>
 
             <section aria-label="Spoken response" className={cardClass}>
@@ -230,8 +294,16 @@ export function ExplainAloudScreen({
                 <h2 className="text-[19px] leading-[1.5] font-medium">In your own words</h2>
                 <Pill>Transcript</Pill>
               </div>
-              <p className="w-full text-[17px] leading-[1.85] text-[#c1bedf]">“{transcript.text}”</p>
-              <p className="text-[11px] leading-[1.5] text-[#9496bf]">{transcript.footnote}</p>
+              {transcript ? (
+                <p className="w-full text-[17px] leading-[1.85] text-[#c1bedf]">“{transcript}”</p>
+              ) : (
+                <Placeholder>{copyFor("transcript", state)}</Placeholder>
+              )}
+              {recordedLabel ? (
+                <p className="text-[11px] leading-[1.5] text-[#9496bf]">
+                  Recorded {recordedLabel} · Only you can see this practice
+                </p>
+              ) : null}
             </section>
 
             <div className="flex w-full items-center justify-between">
@@ -241,10 +313,11 @@ export function ExplainAloudScreen({
               <button
                 type="button"
                 onClick={onRecordAgain}
-                className="flex h-[46px] items-center justify-center gap-[9px] rounded-[12px] bg-[#ff5e7a] px-[18px] text-[13px] leading-[1.5] font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#ff7790]"
+                disabled={state === "signed-out" || state === "loading"}
+                className="flex h-[46px] items-center justify-center gap-[9px] rounded-[12px] bg-[#ff5e7a] px-[18px] text-[13px] leading-[1.5] font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#ff7790] disabled:cursor-default disabled:opacity-50 disabled:hover:bg-[#ff5e7a]"
               >
                 <Icon name="mic" width={18} height={18} />
-                Record another attempt
+                {hasAttempt ? "Record another attempt" : "Record an explanation"}
               </button>
             </div>
           </div>
@@ -256,22 +329,28 @@ export function ExplainAloudScreen({
                 <Icon name="sparkles" width={22} height={22} />
                 <h2 className="text-[21px] leading-[1.5] font-medium whitespace-nowrap">A little feedback from AI</h2>
               </div>
-              <Pill tone="success">Analysis complete</Pill>
+              <FeedbackStatus state={state} />
             </div>
-            <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{feedback.summary}</p>
+            {feedback?.summary ? (
+              <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{feedback.summary}</p>
+            ) : null}
 
             <div className="flex w-full flex-col gap-3 rounded-[12px] bg-[#142b30] p-5">
               <div className="flex items-start gap-[9px]">
                 <Icon name="circle-check" width={18} height={18} />
                 <h3 className="text-[13px] leading-[1.5] font-semibold text-[#4ecba0]">What you covered</h3>
               </div>
-              <ul className="flex flex-col gap-3">
-                {feedback.covered.map((item) => (
-                  <li key={item} className="text-[13px] leading-[1.5] whitespace-pre-wrap text-[#e8e6ff]">
-                    {`✓  ${item}`}
-                  </li>
-                ))}
-              </ul>
+              {covered.length > 0 ? (
+                <ul className="flex flex-col gap-3">
+                  {covered.map((item) => (
+                    <li key={item} className="text-[13px] leading-[1.5] whitespace-pre-wrap text-[#e8e6ff]">
+                      {`✓  ${item}`}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <Placeholder bordered={false}>Ideas you explained well will show up here.</Placeholder>
+              )}
             </div>
 
             <div className="flex w-full flex-col gap-3.5 rounded-[12px] bg-[#281d35] p-5">
@@ -279,27 +358,27 @@ export function ExplainAloudScreen({
                 <Icon name="circle-dashed" width={18} height={18} />
                 <h3 className="text-[13px] leading-[1.5] font-semibold text-[#ff5e7a]">What’s still missing</h3>
               </div>
-              {feedback.gaps.map((gap) => (
-                <div key={gap.title} className="flex w-full flex-col gap-[5px] text-[13px] leading-[1.5]">
-                  <p className="font-medium text-white">{gap.title}</p>
-                  <p className="text-[#c1bedf]">{gap.detail}</p>
-                </div>
-              ))}
+              {gaps.length > 0 ? (
+                gaps.map((gap) => (
+                  <div key={gap.title} className="flex w-full flex-col gap-[5px] text-[13px] leading-[1.5]">
+                    <p className="font-medium text-white">{gap.title}</p>
+                    <p className="text-[#c1bedf]">{gap.detail}</p>
+                  </div>
+                ))
+              ) : (
+                <Placeholder bordered={false}>
+                  {feedback ? "No gaps found in this explanation. Nice work." : "Gaps in your explanation will show up here."}
+                </Placeholder>
+              )}
             </div>
 
             <div className="flex w-full flex-col gap-2.5">
-              <p className={eyebrowClass}>{feedback.nextStep.label}</p>
-              <p className="text-[14px] leading-[1.5] text-white">{feedback.nextStep.text}</p>
-              <div className="flex w-full items-start justify-between leading-[1.5] whitespace-nowrap">
-                {feedback.nextStep.reviewHref ? (
-                  <Link href={feedback.nextStep.reviewHref} className="text-[12px] text-[#ff5e7a] hover:underline">
-                    {feedback.nextStep.reviewLabel} ↗
-                  </Link>
-                ) : (
-                  <span className="text-[12px] text-[#ff5e7a]">{feedback.nextStep.reviewLabel} ↗</span>
-                )}
-                <p className="text-[11px] text-[#9496bf]">{feedback.nextStep.listStatus}</p>
-              </div>
+              <p className={eyebrowClass}>TRY THIS NEXT</p>
+              {feedback?.nextStep ? (
+                <p className="text-[14px] leading-[1.5] text-white">{feedback.nextStep}</p>
+              ) : (
+                <Placeholder bordered={false}>A suggested next attempt will appear here.</Placeholder>
+              )}
             </div>
           </section>
         </div>
