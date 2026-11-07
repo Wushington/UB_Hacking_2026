@@ -11,7 +11,7 @@ from gemini_client import AIServiceError, make_flashcards, transcribe_image  # n
 from preprocess import preprocess  # noqa: E402
 from schemas import FlashcardSet, NoteResult  # noqa: E402
 
-app = FastAPI(title="Notes AI service")
+app = FastAPI(title="Orbit Study", version="0.1.0", description="AI service for transcribing handwritten notes, generating flashcards, helping students learn, and more.")
 
 MAX_UPLOAD = 15 * 1024 * 1024
 

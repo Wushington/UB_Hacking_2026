@@ -16,7 +16,7 @@ MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 client = genai.Client()
 
 TRANSCRIBE_PROMPT = """You are transcribing a photo of handwritten notes \
-(notebook, whiteboard, or chalkboard) for a student.
+(notebook, whiteboard, chalkboard, etc.) for a student.
 
 Rules:
 1. Transcribe FAITHFULLY. Do not fix spelling, grammar, or math inside `content`. \
