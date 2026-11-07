@@ -19,6 +19,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1164.0",
     "@base-ui/react": "^1.9.0",
     "@clerk/nextjs": "^7.9.25",
+    "@clerk/ui": "^1.42.4",
     "@google/genai": "^3.0.0",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.2",

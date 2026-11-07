@@ -1,4 +1,4 @@
-import { Show, SignInButton, UserButton } from "@clerk/nextjs";
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,13 @@ export function SiteHeader() {
           <Suspense fallback={null}>
             <Show when="signed-out">
               <SignInButton mode="modal">
-                <Button size="sm">Sign in</Button>
+                <Button size="sm" variant="ghost">
+                  Sign in
+                </Button>
               </SignInButton>
+              <SignUpButton mode="modal">
+                <Button size="sm">Get started</Button>
+              </SignUpButton>
             </Show>
             <Show when="signed-in">
               <UserButton />
