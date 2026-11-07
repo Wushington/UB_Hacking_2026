@@ -179,3 +179,22 @@ cython_debug/
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
 .cursorindexingignore
+# ---- Node / Next.js (Orbit Study web app) ----
+/node_modules
+/.next/
+/out/
+/build
+/coverage
+*.tsbuildinfo
+next-env.d.ts
+npm-debug.log*
+.vercel
+*.pem
+.DS_Store
+
+# env files: never commit real values; the template stays tracked
+.env*
+!.env.example
+
+# The Python template above ignores every lib/ directory; the app's src/lib must be tracked.
+!src/lib/
