@@ -86,6 +86,12 @@ describe("SiteShell", () => {
     expect(screen.getByRole("banner")).toHaveClass("relative", "z-40");
   });
 
+  it("links Weak concepts to the weak concepts list", () => {
+    renderShell("/");
+    const main = screen.getByRole("navigation", { name: "Main" });
+    expect(within(main).getByRole("link", { name: "Weak concepts" })).toHaveAttribute("href", "/weak-concepts");
+  });
+
   it("links Quizzes to the flashcard decks page", () => {
     renderShell("/");
     const main = screen.getByRole("navigation", { name: "Main" });
