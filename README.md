@@ -16,6 +16,14 @@ npm run dev                  # http://localhost:3000
 
 Clerk keys are required for `npm run dev`; the build and tests run without credentials.
 
+Whiteboard processing also needs the Python AI service running alongside (`AI_SERVICE_URL`, default port 8000):
+```bash
+cd src/ai-service
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r ../../requirements.txt
+uvicorn main:app --reload --port 8000               # docs at http://localhost:8000/docs
+```
+
 | Command | What it does |
 | --- | --- |
 | `npm run dev` / `build` / `start` | Develop / production build / serve the build |
@@ -32,6 +40,7 @@ Clerk keys are required for `npm run dev`; the build and tests run without crede
 | `src/db/schema.ts` | Database tables. `src/db/index.ts` exports `getDb()` (server only). |
 | `src/lib/auth.ts` | `requireUserId()` for every server action / route handler. |
 | `src/lib/gemini.ts`, `src/lib/storage.ts` | Server-only Gemini client and private object storage (presigned URLs). |
+| `src/ai-service/` | Python (FastAPI + OpenCV) service: whiteboard photos → notes. Only the Next.js server calls it, via `src/lib/ai/notes.ts`. All other Gemini features call `src/lib/gemini.ts`. |
 | `src/lib/env.ts` | Environment validation per integration. |
 | `src/components/ui/` | shadcn/ui primitives (`npx shadcn@latest add <name>`). `src/components/layout/` holds the app shell. |
 | `deploy/` | Caddy + Vultr deployment notes. |
@@ -41,6 +50,7 @@ Clerk keys are required for `npm run dev`; the build and tests run without crede
 - **Authorization is ours, not Clerk's.** Call `requireUserId()` and filter every query with `eq(table.userId, userId)`. Child rows (sections, blocks, segments, cards…) have no `user_id`: load the owned parent first.
 - Insert the `users` row (`on conflict do nothing`) before a user's first write; every owned table references it.
 - Never trust ids from Gemini or client-submitted owner ids; the server assigns ids and checks ownership.
+- The Python AI service is internal: bind it to 127.0.0.1 and never call it from the browser.
 - Secrets (`DATABASE_URL`, `GEMINI_API_KEY`, `CLERK_SECRET_KEY`, `VULTR_S3_*`) stay in server-only modules. Only `NEXT_PUBLIC_*` reaches the browser.
 - Media stays in the private bucket; the database stores only object keys. Serve files with short-lived presigned URLs.
 - Validate all Gemini responses with the matching schema in `src/contracts/`.

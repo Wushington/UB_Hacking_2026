@@ -1,56 +1,63 @@
-"""The JSON contract between this service and the Node backend.
+"""The JSON contract between this service and the Next.js backend.
 
-Share this shape with the backend/frontend team early. If you change it,
-tell them, because they are building against it.
+`NotesGeneration` mirrors `notesGenerationSchema` in src/contracts/notes.ts
+(camelCase on purpose, so the JSON matches 1:1). If you change it, change the
+TypeScript contract too and tell the team, because they are building against it.
 """
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-Category = Literal[
-    "algebra", "calculus", "statistics", "physics", "chemistry", "biology",
-    "computer_science", "english", "history", "other",
-]
+# Keep in sync with NOTE_BLOCK_KINDS in src/contracts/notes.ts.
+BlockKind = Literal["paragraph", "bullet", "definition", "example", "equation"]
 
 
-class Block(BaseModel):
-    id: int = Field(description="Sequential id starting at 0, in reading order")
-    type: Literal["heading", "text", "equation", "list", "diagram"]
-    content: str = Field(
-        description="Faithful transcription. Markdown for text, LaTeX (no $ delimiters) "
-                    "for equations, a short description for diagrams."
+# ---- What this service returns --------------------------------------------
+
+class SourceRef(BaseModel):
+    imageId: str
+
+
+class NoteBlock(BaseModel):
+    kind: BlockKind
+    text: str = Field(min_length=1)
+    sourceRefs: list[SourceRef]
+
+
+class NoteSection(BaseModel):
+    heading: str = Field(min_length=1)
+    blocks: list[NoteBlock] = Field(min_length=1)
+
+
+class NotesGeneration(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    sections: list[NoteSection] = Field(min_length=1)
+    suggestedCategoryName: str | None = Field(default=None, max_length=60)
+
+
+# ---- What we ask Gemini for ------------------------------------------------
+# The model cites images by their 1-based number in the prompt instead of by
+# UUID: models mangle long ids, and numbers let us drop out-of-range refs.
+
+class _GeminiBlock(BaseModel):
+    kind: BlockKind
+    text: str = Field(
+        description="Markdown for prose. For kind 'equation', LaTeX without $ delimiters."
     )
-    legibility: Literal["clear", "unsure", "illegible"] = Field(
-        description="'unsure' if any word or symbol was a guess"
-    )
-    unsure_spans: list[str] = Field(
-        default_factory=list,
-        description="Exact substrings of content that were guessed",
+    source_images: list[int] = Field(
+        description="1-based numbers of the images this block was read from"
     )
 
 
-class Correction(BaseModel):
-    block_id: int
-    kind: Literal["spelling", "grammar", "math"]
-    original: str = Field(description="Exact substring from the block's content")
-    suggested: str
-    reason: str = Field(description="One short sentence")
+class _GeminiSection(BaseModel):
+    heading: str
+    blocks: list[_GeminiBlock]
 
 
-class NoteResult(BaseModel):
+class GeminiNotes(BaseModel):
     title: str = Field(description="Short title inferred from the content")
-    category: Category
-    blocks: list[Block]
-    corrections: list[Correction] = Field(
-        default_factory=list,
-        description="Suggested fixes. Never applied to blocks.",
+    sections: list[_GeminiSection]
+    suggested_category_name: str | None = Field(
+        default=None,
+        description="Subject area, e.g. 'Organic Chemistry'. A suggestion only.",
     )
-
-
-class Flashcard(BaseModel):
-    front: str
-    back: str
-
-
-class FlashcardSet(BaseModel):
-    cards: list[Flashcard]
