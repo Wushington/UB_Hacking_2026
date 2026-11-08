@@ -1,13 +1,15 @@
 import "server-only";
-import { and, asc, eq, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, lt, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { GEMINI_FALLBACK_MODELS, GEMINI_MODEL, getGemini } from "@/lib/gemini";
 import { getObjectBytes } from "@/lib/storage";
 import {
   buildGradingPrompt,
   GRADING_RESPONSE_JSON_SCHEMA,
+  MAX_OPEN_CONCEPTS,
   parseGradingResponse,
   type GradingNotes,
+  type OpenConcept,
 } from "./grading";
 
 const {
@@ -31,12 +33,19 @@ const GEMINI_ATTEMPT_TIMEOUT_MS = 45_000;
 /** Stay inside the routes' maxDuration (120s) so the job can still mark itself failed. */
 const GEMINI_TOTAL_BUDGET_MS = 105_000;
 
-function isTransientGeminiError(error: unknown): boolean {
+/**
+ * Worth retrying on the next model: overload, rate limits, hangs, or a model id this key can't use
+ * (404 NOT_FOUND, e.g. a misconfigured GEMINI_MODEL or a retired version). Anything else (bad
+ * request, auth) fails straight away.
+ */
+function isRetryableGeminiError(error: unknown): boolean {
   const name = (error as Error)?.name;
   if (name === "TimeoutError" || name === "AbortError") return true;
   const status = (error as { status?: unknown }).status;
-  if (typeof status === "number") return status === 429 || status >= 500;
-  return /"code":\s*(429|5\d\d)|UNAVAILABLE|RESOURCE_EXHAUSTED|DEADLINE_EXCEEDED/.test(String((error as Error)?.message));
+  if (typeof status === "number") return status === 404 || status === 429 || status >= 500;
+  return /"code":\s*(404|429|5\d\d)|NOT_FOUND|UNAVAILABLE|RESOURCE_EXHAUSTED|DEADLINE_EXCEEDED/.test(
+    String((error as Error)?.message),
+  );
 }
 
 /** Model for each attempt: primary first, then the fallbacks, then back to the primary. */
@@ -59,7 +68,7 @@ async function withGeminiRetries<T>(call: (model: string, signal: AbortSignal) =
       const delay = attempt === 0 ? 0 : GEMINI_RETRY_DELAYS_MS[attempt - 1];
       const timeLeft = GEMINI_TOTAL_BUDGET_MS - (Date.now() - startedAt);
       // Only retry if there's still a meaningful window (≥15s) for another attempt.
-      if (delay === undefined || !isTransientGeminiError(error) || timeLeft - delay < 15_000) throw error;
+      if (delay === undefined || !isRetryableGeminiError(error) || timeLeft - delay < 15_000) throw error;
       console.warn(
         `Gemini ${model} unavailable (${(error as Error).name}); retrying with ${MODEL_ROTATION[(attempt + 1) % MODEL_ROTATION.length]}${delay ? ` in ${delay / 1000}s` : ""}`,
       );
@@ -107,6 +116,30 @@ export async function claimForGrading(
 
   const [current] = await db.select({ status: audioRecordings.status }).from(audioRecordings).where(owned).limit(1);
   return { claimed: null, status: current?.status ?? "not-found" };
+}
+
+/**
+ * The student's weak concepts for a class, newest first: open ones (candidates for mastery) and
+ * resolved ones (shown to Gemini only so a renewed struggle reuses their key and reopens them).
+ */
+async function loadKnownConcepts(
+  userId: string,
+  lectureId: string,
+  chosenKey: string | null,
+): Promise<{ open: OpenConcept[]; resolved: OpenConcept[] }> {
+  const rows = await getDb()
+    .select({ conceptKey: weakConcepts.conceptKey, label: weakConcepts.label, resolvedAt: weakConcepts.resolvedAt })
+    .from(weakConcepts)
+    .where(and(eq(weakConcepts.userId, userId), eq(weakConcepts.lectureId, lectureId)))
+    .orderBy(desc(weakConcepts.lastSeenAt));
+  const pick = (resolved: boolean) =>
+    rows
+      .filter((r) => (r.resolvedAt !== null) === resolved)
+      // The concept the student chose always makes the cut.
+      .sort((a, b) => Number(b.conceptKey === chosenKey) - Number(a.conceptKey === chosenKey))
+      .slice(0, MAX_OPEN_CONCEPTS)
+      .map(({ conceptKey, label }) => ({ conceptKey, label }));
+  return { open: pick(false), resolved: pick(true) };
 }
 
 async function loadNotes(userId: string, lectureId: string): Promise<GradingNotes | null> {
@@ -160,7 +193,14 @@ export async function runGrading(recording: Recording): Promise<"ready" | "faile
       await markFailed(recording.id, "recording has no notes");
       return "failed";
     }
-    const notes = await loadNotes(recording.userId, recording.lectureId);
+    const [notes, known] = await Promise.all([
+      loadNotes(recording.userId, recording.lectureId),
+      loadKnownConcepts(recording.userId, recording.lectureId, recording.conceptKey),
+    ]);
+    const openConcepts = known.open;
+    const chosenConcept = recording.conceptKey
+      ? { conceptKey: recording.conceptKey, label: recording.conceptLabel ?? recording.conceptKey }
+      : null;
     const blockIds = new Set(notes?.sections.flatMap((s) => s.blocks.map((b) => b.id)) ?? []);
     if (!notes || blockIds.size === 0) {
       await markFailed(recording.id, "notes are empty, nothing to compare against");
@@ -177,7 +217,7 @@ export async function runGrading(recording: Recording): Promise<"ready" | "faile
             role: "user",
             parts: [
               { inlineData: { mimeType: recording.mimeType, data: audioBase64 } },
-              { text: buildGradingPrompt(notes) },
+              { text: buildGradingPrompt(notes, openConcepts, known.resolved, chosenConcept) },
             ],
           },
         ],
@@ -190,7 +230,12 @@ export async function runGrading(recording: Recording): Promise<"ready" | "faile
       }),
     );
 
-    const feedback = parseGradingResponse(response.text, blockIds);
+    const openByKey = new Map(openConcepts.map((c) => [c.conceptKey, c]));
+    const feedback = parseGradingResponse(response.text, blockIds, new Set(openByKey.keys()));
+    const masteredConcepts = feedback.masteredConceptKeys
+      .map((key) => openByKey.get(key))
+      .filter((c): c is OpenConcept => c !== undefined)
+      .map(({ conceptKey, label }) => ({ conceptKey, label }));
     if (!feedback.transcriptText) {
       await markFailed(recording.id, "no intelligible speech in the recording");
       return "failed";
@@ -208,6 +253,8 @@ export async function runGrading(recording: Recording): Promise<"ready" | "faile
           summary: feedback.summary ?? null,
           coveredIdeas: feedback.covered,
           nextStep: feedback.nextStep ?? null,
+          // Cleared only once the student rates the attempt (see self-rating.ts).
+          masteredConcepts,
         })
         .returning({ id: explanationFeedback.id });
 
@@ -238,7 +285,13 @@ export async function runGrading(recording: Recording): Promise<"ready" | "faile
           })
           .onConflictDoUpdate({
             target: [weakConcepts.userId, weakConcepts.lectureId, weakConcepts.conceptKey],
-            set: { label: wp.label, feedbackCount: sql`${weakConcepts.feedbackCount} + 1`, lastSeenAt: now },
+            set: {
+              label: wp.label,
+              feedbackCount: sql`${weakConcepts.feedbackCount} + 1`,
+              lastSeenAt: now,
+              // Struggling with a resolved concept again reopens it.
+              resolvedAt: null,
+            },
           })
           .returning({ id: weakConcepts.id });
 

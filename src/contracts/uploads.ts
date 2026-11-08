@@ -53,6 +53,8 @@ export const finalizeUploadSchema = z.object({
   purpose: z.enum(UPLOAD_PURPOSES),
   lectureId: z.uuid().optional(),
   durationMs: z.number().int().positive().optional(),
+  /** explanation_audio only: the open weak concept (in lectureId) the student chose to explain. */
+  conceptKey: z.string().trim().min(1).max(80).optional(),
 });
 export type FinalizeUpload = z.infer<typeof finalizeUploadSchema>;
 

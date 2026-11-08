@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+/*
+ * Lifecycle: a weak concept is open while weak_concepts.resolved_at is null. After a sound
+ * explanation the student rates themselves: 4–5 deletes the row, 1–3 sets resolved_at.
+ * Lists must show only open concepts, and anything that records a new struggle (an explanation
+ * weak point or a missed quiz card) must set resolved_at back to null to reopen it.
+ */
+
 /** Where a weakness was identified (rows in weak_concept_sources). */
 export const WEAK_CONCEPT_SOURCE_TYPES = ["study_review_event", "explanation_weak_point"] as const;
 export type WeakConceptSourceType = (typeof WEAK_CONCEPT_SOURCE_TYPES)[number];

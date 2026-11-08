@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { WeakConceptView } from "@/contracts/weak-concepts";
 import { missedReviewEvents, recordWeakConceptEvents, toWeakConceptViews, type WeakConceptWriter } from "./core";
@@ -30,7 +30,12 @@ function writer(tx: Tx): WeakConceptWriter {
         : { feedbackCount: sql`${weakConcepts.feedbackCount} + 1` };
       await tx
         .update(weakConcepts)
-        .set({ ...counter, label, lastSeenAt: sql`greatest(${weakConcepts.lastSeenAt}, ${seenAt.toISOString()}::timestamptz)` })
+        .set({
+          ...counter,
+          label,
+          lastSeenAt: sql`greatest(${weakConcepts.lastSeenAt}, ${seenAt.toISOString()}::timestamptz)`,
+          resolvedAt: null, // a new miss reopens a resolved concept
+        })
         .where(eq(weakConcepts.id, conceptId));
     },
   };
@@ -58,7 +63,7 @@ export async function recordMissedCardsForSession(tx: Tx, userId: string, sessio
   return recordWeakConceptEvents(writer(tx), userId, missedReviewEvents(rows));
 }
 
-/** The user's weak concepts, most recent first, with the flashcards they missed for each. */
+/** The user's open weak concepts (resolved ones hidden), most recent first, with the flashcards they missed for each. */
 export async function listWeakConcepts(userId: string): Promise<WeakConceptView[]> {
   const db = getDb();
   const concepts = await db
@@ -73,7 +78,7 @@ export async function listWeakConcepts(userId: string): Promise<WeakConceptView[
     })
     .from(weakConcepts)
     .innerJoin(lectures, and(eq(lectures.id, weakConcepts.lectureId), eq(lectures.userId, userId)))
-    .where(eq(weakConcepts.userId, userId))
+    .where(and(eq(weakConcepts.userId, userId), isNull(weakConcepts.resolvedAt)))
     .orderBy(desc(weakConcepts.lastSeenAt));
   if (concepts.length === 0) return [];
   const conceptIds = concepts.map((c) => c.id);

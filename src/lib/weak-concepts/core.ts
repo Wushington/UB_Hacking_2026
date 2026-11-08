@@ -17,7 +17,10 @@ export type WeakConceptWriter = {
   ensureConcept(userId: string, lectureId: string, conceptKey: string, label: string, seenAt: Date): Promise<string>;
   /** Links the source event to the concept; false when that event was already recorded. */
   addSource(conceptId: string, sourceType: WeakConceptSourceType, sourceId: string): Promise<boolean>;
-  /** Adds one to the source type's counter and refreshes label + last_seen_at. */
+  /**
+   * Adds one to the source type's counter, refreshes label + last_seen_at, and reopens the concept
+   * if it was resolved (resolved_at → null): a new struggle brings it back to the student's list.
+   */
   countSource(conceptId: string, sourceType: WeakConceptSourceType, label: string, seenAt: Date): Promise<void>;
 };
 
