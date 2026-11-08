@@ -44,15 +44,27 @@ def health():
 
 @app.post("/process-notes", response_model=NotesGeneration, response_model_exclude_none=True)
 async def process_notes(
-    files: Annotated[list[UploadFile], File(description="Images in the student's chosen order")],
-    image_ids: Annotated[list[UUID], Form(description="One id per file, same order")],
+    files: Annotated[
+        list[UploadFile],
+        File(
+            description="Images in the student's chosen order",
+            # Swagger UI (/docs) only shows file pickers for array items marked
+            # format: binary; FastAPI's OpenAPI 3.1 output omits it.
+            json_schema_extra={"items": {"type": "string", "format": "binary"}},
+        ),
+    ],
+    image_ids: Annotated[
+        list[str],
+        Form(description="One id per file, same order (repeated fields or comma-separated)"),
+    ],
     enhance: bool = True,
 ):
     if not MIN_IMAGES <= len(files) <= MAX_IMAGES:
         raise HTTPException(422, f"Send {MIN_IMAGES}-{MAX_IMAGES} images")
-    if len(image_ids) != len(files):
+    ids = _parse_ids(image_ids)
+    if len(ids) != len(files):
         raise HTTPException(422, "Send exactly one image_id per file")
-    if len(set(image_ids)) != len(image_ids):
+    if len(set(ids)) != len(ids):
         raise HTTPException(422, "Each image can appear only once")
 
     jpegs = []
@@ -69,6 +81,20 @@ async def process_notes(
             raise HTTPException(400, f"Could not read image {f.filename or ''}".strip())
 
     try:
-        return await generate_notes(jpegs, [str(i) for i in image_ids])
+        return await generate_notes(jpegs, ids)
     except AIServiceError as e:
         raise HTTPException(502, str(e))
+
+
+def _parse_ids(values: list[str]) -> list[str]:
+    """Accept repeated image_ids fields (what Next.js sends) or one comma-separated
+    value (what Swagger UI at /docs sends), and normalize them to canonical UUIDs."""
+    ids = []
+    for part in (p.strip() for v in values for p in v.split(",")):
+        if not part:
+            continue
+        try:
+            ids.append(str(UUID(part)))
+        except ValueError:
+            raise HTTPException(422, f"image_ids must be UUIDs; got {part[:40]!r}")
+    return ids

@@ -19,12 +19,23 @@ const schemas = {
   }),
   gemini: z.object({
     GEMINI_API_KEY: required,
+  }),
+  /** Model choice only (no secrets), so src/lib/gemini can read it at import without the API key. */
+  geminiModels: z.object({
     /** Shared with src/ai-service. The -latest alias avoids pinning a version that gets retired. */
     GEMINI_MODEL: z
       .string()
       .trim()
       .optional()
       .transform((v) => v || "gemini-flash-latest"),
+    /** Comma-separated, tried in order when the primary is overloaded, rate-limited or hangs. */
+    GEMINI_FALLBACK_MODELS: z
+      .string()
+      .optional()
+      .transform((v) => {
+        const models = (v ?? "").split(",").map((m) => m.trim()).filter(Boolean);
+        return models.length ? models : ["gemini-3.6-flash", "gemini-3.5-flash"];
+      }),
   }),
   /** The Python image-processing service (src/ai-service). Server-to-server only. */
   aiService: z.object({

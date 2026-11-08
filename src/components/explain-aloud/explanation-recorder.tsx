@@ -262,7 +262,14 @@ export function ExplanationRecorder({
             disabled={disabled || noClasses}
             className={cn(primaryButton, "w-full sm:w-auto")}
           >
-            <Image src="/figma/explain-aloud/mic.svg" alt="" width={18} height={18} className="block max-w-none" />
+            <Image
+              src="/figma/explain-aloud/mic.svg"
+              alt=""
+              width={18}
+              height={18}
+              style={{ width: 18, height: 18 }}
+              className="block max-w-none"
+            />
             {hasAttempt ? "Record another attempt" : "Record an explanation"}
           </button>
         ) : null}

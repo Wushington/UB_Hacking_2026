@@ -44,11 +44,18 @@ describe("parseEnv", () => {
   });
 
   it("defaults GEMINI_MODEL to the -latest alias when unset or blank", () => {
-    expect(parseEnv("gemini", { GEMINI_API_KEY: "k" }).GEMINI_MODEL).toBe("gemini-flash-latest");
-    expect(parseEnv("gemini", { GEMINI_API_KEY: "k", GEMINI_MODEL: " " }).GEMINI_MODEL).toBe("gemini-flash-latest");
-    expect(parseEnv("gemini", { GEMINI_API_KEY: "k", GEMINI_MODEL: "gemini-pro-latest" }).GEMINI_MODEL).toBe(
-      "gemini-pro-latest",
-    );
+    expect(parseEnv("geminiModels", {}).GEMINI_MODEL).toBe("gemini-flash-latest");
+    expect(parseEnv("geminiModels", { GEMINI_MODEL: " " }).GEMINI_MODEL).toBe("gemini-flash-latest");
+    expect(parseEnv("geminiModels", { GEMINI_MODEL: "gemini-pro-latest" }).GEMINI_MODEL).toBe("gemini-pro-latest");
+  });
+
+  it("parses GEMINI_FALLBACK_MODELS as a comma-separated list with defaults", () => {
+    expect(parseEnv("geminiModels", {}).GEMINI_FALLBACK_MODELS).toEqual(["gemini-3.6-flash", "gemini-3.5-flash"]);
+    expect(parseEnv("geminiModels", { GEMINI_FALLBACK_MODELS: " a, ,b " }).GEMINI_FALLBACK_MODELS).toEqual(["a", "b"]);
+    expect(parseEnv("geminiModels", { GEMINI_FALLBACK_MODELS: "" }).GEMINI_FALLBACK_MODELS).toEqual([
+      "gemini-3.6-flash",
+      "gemini-3.5-flash",
+    ]);
   });
 
   it("requires a URL for the AI service", () => {

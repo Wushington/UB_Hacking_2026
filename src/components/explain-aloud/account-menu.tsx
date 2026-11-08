@@ -99,6 +99,7 @@ export function AccountMenu() {
             alt=""
             width={10.7682}
             height={7.10112}
+            style={{ width: 10.7682, height: 7.10112 }}
             className="absolute top-[-0.32px] left-[-0.38px] block max-w-none"
           />
         </span>
