@@ -41,7 +41,7 @@ export function SubjectsScreen({ lectures, signedIn }: { lectures: SubjectLectur
       {signedIn && groups.length === 0 ? (
         <section className={orbitCardClass}>
           <p className="rounded-[12px] border border-dashed border-[#333564] px-5 py-8 text-center text-[14px] leading-[1.6] text-[#9496bf]">
-            No subjects yet. Capture a whiteboard photo and your notes will show up here.
+            No subjects yet. Upload photos of your handwritten notes and they’ll show up here.
           </p>
         </section>
       ) : null}

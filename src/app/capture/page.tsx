@@ -17,7 +17,7 @@ async function CaptureContent() {
   return <CaptureWorkspace subjects={subjects} signedIn={Boolean(userId)} />;
 }
 
-/** Step 01: upload whiteboard photos, pick a subject, and turn them into notes. */
+/** Step 01: upload photos of handwritten notes, pick a subject, and turn them into notes. */
 export default function CapturePage() {
   return (
     <OrbitPage>

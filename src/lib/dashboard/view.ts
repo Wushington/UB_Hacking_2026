@@ -11,7 +11,7 @@ export type DashboardView = {
     streakDays: number;
   };
   classes: { id: string; name: string; noteCount: number }[];
-  recentNotes: { id: string; title: string; className: string | null; source: "Whiteboard" | "Audio" | "Notes"; dayLabel: string }[];
+  recentNotes: { id: string; title: string; className: string | null; source: "Handwritten" | "Audio" | "Notes"; dayLabel: string }[];
   weakConcepts: { id: string; label: string; detail: string }[];
   weakConceptCount: number;
 };

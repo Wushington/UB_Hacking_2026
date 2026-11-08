@@ -56,7 +56,7 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
   } else if (lecture.status !== "ready") {
     body = (
       <Message title={lecture.status === "failed" ? "We couldn’t organize these notes" : "No notes yet"}>
-        <p>Add whiteboard photos on the Capture page to generate notes.</p>
+        <p>Upload photos of your handwritten notes on the Capture page to generate notes.</p>
         {captureLink}
       </Message>
     );
@@ -99,7 +99,7 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
   );
 }
 
-/** Step 02: read the notes generated from whiteboard photos, move them to another subject, or delete them. */
+/** Step 02: read the notes generated from photos of handwritten notes, move them to another subject, or delete them. */
 export default function LectureNotesPage({ params }: PageProps<"/lectures/[id]">) {
   return (
     <OrbitPage>

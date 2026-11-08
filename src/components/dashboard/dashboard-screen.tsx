@@ -135,7 +135,7 @@ function Capture() {
         <h2 id="capture-heading" className="text-[22px] font-medium tracking-[-0.8px] text-white sm:text-[25px]">
           Less transcribing. More understanding.
         </h2>
-        <p className="text-[12px] leading-[1.65] text-orbit-muted">Turn a whiteboard photo or lecture audio into clear, organized notes.</p>
+        <p className="text-[12px] leading-[1.65] text-orbit-muted">Turn handwritten notes or lecture audio into clear, organized notes.</p>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Link
@@ -147,7 +147,7 @@ function Capture() {
             <ArrowUpRight aria-hidden className="size-4 text-orbit-muted" />
           </span>
           <span className="flex flex-col gap-1.5">
-            <span className="text-[14px] font-semibold text-orbit-text">Upload whiteboard photo</span>
+            <span className="text-[14px] font-semibold text-orbit-text">Upload handwritten notes</span>
             <span className="text-[11px] text-orbit-muted">JPG, PNG or HEIC</span>
           </span>
         </Link>
@@ -170,7 +170,7 @@ function RecentNotes({ view }: { view: DashboardView }) {
       ) : (
         <ul className="flex flex-col">
           {view.recentNotes.map((note) => {
-            const Icon = note.source === "Audio" ? AudioLines : note.source === "Whiteboard" ? ImageIcon : NotebookTabs;
+            const Icon = note.source === "Audio" ? AudioLines : note.source === "Handwritten" ? ImageIcon : NotebookTabs;
             return (
               <li key={note.id} className="border-b border-orbit-line last:border-b-0">
                 <Link href={`/lectures/${note.id}/study`} className="group flex items-center gap-[13px] py-[13px]">

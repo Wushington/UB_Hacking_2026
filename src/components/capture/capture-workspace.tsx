@@ -174,7 +174,7 @@ export function CaptureWorkspace({
       <OrbitPageHeading
         eyebrow="01 / CAPTURE YOUR NOTES"
         title="Good notes start here."
-        subtitle="Bring a whiteboard photo or lecture audio. We’ll help you connect the dots."
+        subtitle="Bring photos of your handwritten notes or lecture audio. We’ll help you connect the dots."
         aside={<CaptureHelpButton />}
       />
 
@@ -213,7 +213,7 @@ export function CaptureWorkspace({
                 <ScanLine aria-hidden className="size-6 text-[#ff5e7a]" strokeWidth={1.75} />
                 <Plus aria-hidden className="size-4 text-[#9496bf] group-hover:text-white" />
               </span>
-              <span className="text-[15px] font-medium text-white">Whiteboard photo</span>
+              <span className="text-[15px] font-medium text-white">Upload handwritten notes</span>
               <span className="text-[12px] text-[#9496bf]">JPG, PNG or HEIC · up to 20 MB</span>
             </button>
             <div
@@ -253,7 +253,7 @@ export function CaptureWorkspace({
                 browse files
               </button>
             </p>
-            <p className="text-[12px] text-[#9496bf]">Add up to {MAX_PHOTOS} whiteboard photos, in the order you want them read.</p>
+            <p className="text-[12px] text-[#9496bf]">Add up to {MAX_PHOTOS} photos of handwritten notes, in the order you want them read.</p>
           </div>
 
           {notice ? (
@@ -274,7 +274,7 @@ export function CaptureWorkspace({
                     <div className="flex min-w-0 flex-1 flex-col">
                       <p className="truncate text-[14px] text-white">{photo.file.name}</p>
                       <p className="text-[11px] text-[#9496bf]">
-                        Whiteboard photo {photos.length > 1 ? `${i + 1} ` : ""}· {formatBytes(photo.file.size)}
+                        Handwritten notes {photos.length > 1 ? `${i + 1} ` : ""}· {formatBytes(photo.file.size)}
                       </p>
                     </div>
                     <Pill tone={status.tone}>{status.label}</Pill>

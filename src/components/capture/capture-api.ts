@@ -39,7 +39,7 @@ export function isAudioFile(file: { name: string; type: string }): boolean {
 
 /** Why this file can't be added, or null if it can. */
 export function photoProblem(file: { name: string; type: string; size: number }): string | null {
-  if (isAudioFile(file)) return "Lecture audio is coming soon. For now, add whiteboard photos.";
+  if (isAudioFile(file)) return "Lecture audio is coming soon. For now, add photos of handwritten notes.";
   if (!photoMimeType(file)) return "Photos must be JPG, PNG, WebP or HEIC.";
   if (file.size <= 0) return "That file is empty.";
   if (file.size > MAX_UPLOAD_BYTES.lecture_image) return "Photos can be up to 20 MB.";

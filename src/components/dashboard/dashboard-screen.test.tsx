@@ -10,7 +10,7 @@ const fullView: DashboardView = {
   firstName: "Ada",
   stats: { quizAccuracy: 74, notesSaved: 3, quizzesTaken: 2, streakDays: 4 },
   classes: [{ id: "c1", name: "Organic Chemistry", noteCount: 3 }],
-  recentNotes: [{ id: LECTURE, title: "Stereochemistry", className: "Organic Chemistry", source: "Whiteboard", dayLabel: "Today" }],
+  recentNotes: [{ id: LECTURE, title: "Stereochemistry", className: "Organic Chemistry", source: "Handwritten", dayLabel: "Today" }],
   weakConcepts: [{ id: "w1", label: "Chirality centers", detail: "Stereochemistry · Missed on 2 flashcards" }],
   weakConceptCount: 1,
 };
@@ -54,7 +54,7 @@ describe("DashboardScreen", () => {
 
   it("links photo capture and all subjects, and marks unbuilt audio capture as coming soon", () => {
     render(<DashboardScreen view={fullView} />);
-    expect(screen.getByRole("link", { name: /upload whiteboard photo/i })).toHaveAttribute("href", "/capture");
+    expect(screen.getByRole("link", { name: /upload handwritten notes/i })).toHaveAttribute("href", "/capture");
     expect(screen.getByRole("link", { name: /view all subjects/i })).toHaveAttribute("href", "/subjects");
     const audio = screen.getByRole("button", { name: /upload lecture audio/i });
     expect(audio).toBeDisabled();

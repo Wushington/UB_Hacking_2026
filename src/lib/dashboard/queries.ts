@@ -67,7 +67,7 @@ export async function getDashboardView(userId: string, firstName: string | null,
       id: r.id,
       title: r.title,
       className: r.className,
-      source: imageIds.has(r.id) ? "Whiteboard" : audioIds.has(r.id) ? "Audio" : "Notes",
+      source: imageIds.has(r.id) ? "Handwritten" : audioIds.has(r.id) ? "Audio" : "Notes",
       dayLabel: dayLabel(r.updatedAt, now),
     })),
     weakConcepts: weak.slice(0, WEAK_CONCEPT_PREVIEW).map((c) => ({

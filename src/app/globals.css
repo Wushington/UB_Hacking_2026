@@ -129,6 +129,18 @@
   html {
     @apply font-sans;
   }
+  /* Tailwind v4 no longer gives buttons a pointer cursor: show it on everything clickable. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  select:not(:disabled),
+  select:not(:disabled) option,
+  input[type="file"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  label[for],
+  summary {
+    cursor: pointer;
+  }
 }
 /* Orbit dark theme. Accent #ff5e7a matches the logo mark. */
 @theme {
