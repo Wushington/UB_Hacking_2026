@@ -12,7 +12,7 @@ describe("CaptureHelpButton", () => {
     await user.click(screen.getByRole("button", { name: /how it works/i }));
     const dialog = screen.getByRole("dialog", { name: /less transcribing/i });
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(screen.getByTestId("help-backdrop")).toContainElement(dialog);
+    expect(screen.getByTestId("modal-backdrop")).toContainElement(dialog);
     expect(within(dialog).getByText(/a clearer source, a better start/i)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Close" })).toHaveFocus();
     expect(document.body.style.overflow).toBe("hidden");
@@ -22,7 +22,7 @@ describe("CaptureHelpButton", () => {
     ["the ✕ button", async (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole("button", { name: "Close" }))],
     ["Got it", async (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByRole("button", { name: "Got it" }))],
     ["Escape", async (user: ReturnType<typeof userEvent.setup>) => user.keyboard("{Escape}")],
-    ["a click on the backdrop", async (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByTestId("help-backdrop"))],
+    ["a click on the backdrop", async (user: ReturnType<typeof userEvent.setup>) => user.click(screen.getByTestId("modal-backdrop"))],
   ])("closes with %s and returns focus to the button", async (_how, close) => {
     const user = userEvent.setup();
     render(<CaptureHelpButton />);

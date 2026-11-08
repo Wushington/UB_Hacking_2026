@@ -7,6 +7,7 @@ import { getDb, schema } from "@/db";
 import { deleteObject, headObject, objectKeyFor } from "@/lib/storage";
 import { checkUploadedImage } from "@/lib/uploads";
 import { ensureUser } from "@/lib/users";
+import { previewKeyFor } from "./photos";
 
 // In the UI a lecture is a set of "notes" and a category is its "subject".
 const { audioRecordings, categories, lectureImages, lectures, noteBlocks, noteSections } = schema;
@@ -226,6 +227,30 @@ export async function loadLectureForPage(userId: string, lectureId: string): Pro
   );
 }
 
+export type LecturePhoto = { id: string; position: number };
+
+/** The photos of notes the user owns, in upload order (for the notes page). */
+export async function listLecturePhotos(userId: string, lectureId: string): Promise<LecturePhoto[]> {
+  return getDb()
+    .select({ id: lectureImages.id, position: lectureImages.position })
+    .from(lectureImages)
+    .where(and(eq(lectureImages.lectureId, lectureId), eq(lectureImages.userId, userId)))
+    .orderBy(asc(lectureImages.position), asc(lectureImages.createdAt));
+}
+
+/** One photo of the user's notes, or null if it isn't theirs. */
+export async function findLecturePhoto(
+  userId: string,
+  lectureId: string,
+  imageId: string,
+): Promise<{ objectKey: string; mimeType: string } | null> {
+  const [row] = await getDb()
+    .select({ objectKey: lectureImages.objectKey, mimeType: lectureImages.mimeType })
+    .from(lectureImages)
+    .where(and(eq(lectureImages.id, imageId), eq(lectureImages.lectureId, lectureId), eq(lectureImages.userId, userId)));
+  return row ?? null;
+}
+
 export type DeleteResult = { ok: true } | { ok: false; status: 404 | 409; error: string };
 
 /**
@@ -251,7 +276,8 @@ export async function deleteLecture(userId: string, lectureId: string, { unfinis
       .where(and(eq(audioRecordings.lectureId, lectureId), eq(audioRecordings.userId, userId)))
       .returning({ key: audioRecordings.objectKey });
     await tx.delete(lectures).where(owned);
-    return { ok: true, keys: [...images, ...recordings].map((r) => r.key) };
+    // Photos may have a generated JPEG preview next to them (see ./photos.ts).
+    return { ok: true, keys: [...images.flatMap((i) => [i.key, previewKeyFor(i.key)]), ...recordings.map((r) => r.key)] };
   });
   if (!result.ok || !("keys" in result)) return result;
   await Promise.allSettled(result.keys.map((key) => deleteObject(key)));

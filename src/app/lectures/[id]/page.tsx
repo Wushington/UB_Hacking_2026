@@ -7,8 +7,9 @@ import { z } from "zod";
 import { ExportNotesPdf } from "@/components/notes/export-notes-pdf";
 import { NotesActions } from "@/components/notes/notes-actions";
 import { NotesView } from "@/components/notes/notes-view";
+import { NotesWithPhotos } from "@/components/notes/photo-viewer";
 import { orbitCardClass, OrbitPage, OrbitPageHeading, Pill } from "@/components/orbit/shell";
-import { listCategories, loadLectureForPage } from "@/lib/lectures/store";
+import { listCategories, listLecturePhotos, loadLectureForPage } from "@/lib/lectures/store";
 
 export const metadata: Metadata = {
   title: "Your notes · Orbit Study",
@@ -38,7 +39,9 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
   if (!z.uuid().safeParse(id).success) notFound();
 
   const { userId } = await auth();
-  const [lecture, subjects] = userId ? await Promise.all([loadLectureForPage(userId, id), listCategories(userId)]) : [null, []];
+  const [lecture, subjects, photos] = userId
+    ? await Promise.all([loadLectureForPage(userId, id), listCategories(userId), listLecturePhotos(userId, id)])
+    : [null, [], []];
   if (userId && !lecture) notFound();
 
   let body: ReactNode;
@@ -62,7 +65,11 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
       </Message>
     );
   } else {
-    body = <div id="orbit-notes-content"><NotesView sections={lecture.sections} /></div>;
+    body = (
+      <NotesWithPhotos photos={photos.map((p) => ({ id: p.id, url: `/api/lectures/${lecture.id}/images/${p.id}` }))}>
+        <NotesView sections={lecture.sections} />
+      </NotesWithPhotos>
+    );
   }
 
   return (
@@ -70,7 +77,11 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
       <OrbitPageHeading
         eyebrow="02 / ORGANIZE NOTES"
         title={lecture?.status === "ready" ? lecture.title : "Your notes"}
-        subtitle={lecture?.status === "ready" ? "Organized from your photos. Turn them into flashcards when you’re ready." : undefined}
+        subtitle={
+          lecture?.status === "ready"
+            ? "Organized from your photos. Tap a “Photo” tag to compare a note with what you wrote."
+            : undefined
+        }
         aside={
           lecture ? (
             <div className="flex flex-wrap items-center gap-2">

@@ -353,10 +353,10 @@ export function ExplanationRecorder({
 						<div className="flex flex-col gap-3">
 							{lectures.length > 1 ?
 								<label className="flex flex-col gap-1.5 text-[12px] leading-[1.5] text-[#9496bf]">
-									Which subject is this for?
+									Which notes is this for?
 									<select
 										value={lectureId}
-										onChange={(e) => setLectureId(e.target.value)}
+										onChange={(e) => chooseLecture(e.target.value)}
 										className="h-[42px] rounded-[10px] border border-[#333564] bg-[#0d0e2a] px-3 text-[14px] text-white"
 									>
 										{lectures.map((l) => (

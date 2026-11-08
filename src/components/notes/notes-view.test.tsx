@@ -64,3 +64,12 @@ describe("NotesView", () => {
     expect(container.querySelector("img")).toBeNull();
   });
 });
+
+describe("blocksToTag", () => {
+  it("tags only where the source photos change", async () => {
+    const { blocksToTag } = await import("./notes-view");
+    const withRefs = (n: number, ids: string[]) => ({ ...block(n, "paragraph", "x"), sourceRefs: ids.map((imageId) => ({ imageId })) });
+    const tagged = blocksToTag([withRefs(1, ["a"]), withRefs(2, ["a"]), withRefs(3, []), withRefs(4, ["a"]), withRefs(5, ["a", "b"]), withRefs(6, ["b"])]);
+    expect([...tagged]).toEqual([id(1), id(4), id(5), id(6)]);
+  });
+});

@@ -21,8 +21,8 @@ const NAV_ITEMS: NavItem[] = [
   // Capturing and a set of notes belong to My subjects (their flashcards belong to Quizzes).
   { label: "My subjects", href: "/subjects", also: ["/capture"], matches: isNotesPage },
   { label: "Quizzes", href: "/quizzes", matches: isStudyPage },
-  // Weak concepts are practised on the explain page; the full list stays reachable at /weak-concepts.
-  { label: "Weak concepts", href: "/explain", also: ["/weak-concepts"] },
+  // Opens the list of weak concepts; practising one on the explain page keeps this section highlighted.
+  { label: "Weak concepts", href: "/weak-concepts", also: ["/explain"] },
 ];
 
 const isCurrent = (href: string, pathname: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
