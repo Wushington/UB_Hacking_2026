@@ -112,9 +112,13 @@ export async function processLecture(lectureId: string, imageIds: string[], fetc
     if (/already generated/i.test(message)) return;
     throw new CaptureError(message || "This class is already being organized.");
   }
-  throw new CaptureError(
-    await serverMessage(res, res.status === 502 ? "Couldn’t organize your notes right now. Please try again." : "Something went wrong. Please try again."),
-  );
+  // This route only returns messages written for students (never raw upstream errors), so show them for 5xx too.
+  let message = "";
+  try {
+    const body = (await res.json()) as { error?: unknown };
+    if (typeof body.error === "string") message = body.error;
+  } catch {}
+  throw new CaptureError(message || "Couldn’t organize your notes right now. Please try again.");
 }
 
 export type PhotoStatus = "ready" | "uploading" | "uploaded" | "failed";

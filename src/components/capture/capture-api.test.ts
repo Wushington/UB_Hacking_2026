@@ -129,6 +129,9 @@ describe("processLecture", () => {
     await expect(processLecture(id(1), [id(2)], respond(502, "Couldn't generate notes right now. Please try again."))).rejects.toThrow(
       /right now/,
     );
+    await expect(processLecture(id(1), [id(2)], respond(503, "The note organizer isn't available right now."))).rejects.toThrow(
+      "The note organizer isn't available right now.",
+    );
     await expect(processLecture(id(1), [id(2)], respond(409, "Already processing"))).rejects.toThrow("Already processing");
   });
 });

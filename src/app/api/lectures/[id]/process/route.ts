@@ -108,6 +108,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lectures/[i
     await db.update(lectures).set({ status: "failed" }).where(owned);
     if (error instanceof AiServiceError) {
       console.error("Note generation failed:", error.message);
+      if (error.reason === "unreachable") {
+        // The details (URL, connection error) are in the server log above; in development, show them too.
+        const hint = process.env.NODE_ENV === "development" ? ` ${error.message}. Is uvicorn running (see README)?` : "";
+        return problem(503, `The note organizer isn't available right now. Please try again in a moment.${hint}`);
+      }
       // 4xx from the service means it rejected an image; anything else is an upstream failure.
       return error.status !== undefined && error.status < 500
         ? problem(422, "One of the images couldn't be read. Try a different photo.")

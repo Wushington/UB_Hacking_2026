@@ -22,6 +22,8 @@ export class AiServiceError extends Error {
     message: string,
     /** HTTP status from the service, or undefined if it could not be reached. */
     readonly status?: number,
+    /** "unreachable": nothing answered at AI_SERVICE_URL (uvicorn not running, wrong URL or misconfigured). */
+    readonly reason: "unreachable" | "failed" = "failed",
   ) {
     super(message);
     this.name = "AiServiceError";
@@ -36,7 +38,12 @@ export async function generateNotesFromImages(
   images: NoteImage[],
   { fetchImpl = fetch }: { fetchImpl?: typeof fetch } = {},
 ): Promise<NotesGeneration> {
-  const { AI_SERVICE_URL } = parseEnv("aiService");
+  let AI_SERVICE_URL: string;
+  try {
+    ({ AI_SERVICE_URL } = parseEnv("aiService"));
+  } catch (error) {
+    throw new AiServiceError((error as Error).message, undefined, "unreachable");
+  }
 
   const form = new FormData();
   for (const image of images) {
@@ -52,7 +59,11 @@ export async function generateNotesFromImages(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch (error) {
-    throw new AiServiceError(`AI service unreachable: ${error instanceof Error ? error.message : String(error)}`);
+    const cause = (error as { cause?: { code?: string } }).cause?.code;
+    const reason = error instanceof Error ? `${error.message}${cause ? ` (${cause})` : ""}` : String(error);
+    // A timeout means the service answered too slowly, not that it's down.
+    if ((error as Error)?.name === "TimeoutError") throw new AiServiceError(`AI service timed out: ${reason}`);
+    throw new AiServiceError(`AI service unreachable at ${AI_SERVICE_URL}: ${reason}`, undefined, "unreachable");
   }
 
   if (!res.ok) {
