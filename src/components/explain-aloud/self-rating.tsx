@@ -1,6 +1,6 @@
 "use client";
 
-import { LoaderCircle, PartyPopper } from "lucide-react";
+import { LoaderCircle, CircleCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
@@ -83,8 +83,8 @@ export function SelfRating({
       className="flex w-full flex-col gap-3 rounded-[12px] border border-[#4ecba0]/30 bg-[#142b30] p-5"
     >
       <div className="flex items-start gap-[9px]">
-        <PartyPopper aria-hidden className="mt-0.5 size-[18px] shrink-0 text-[#4ecba0]" />
-        <h3 className="text-[13px] leading-[1.5] font-semibold text-[#4ecba0]">You’ve got this</h3>
+        <CircleCheck aria-hidden className="mt-0.5 size-[18px] shrink-0 text-[#4ecba0]" />
+        <h3 className="text-[13px] leading-[1.5] font-semibold text-[#4ecba0]">Concept Mastered</h3>
       </div>
       <p className="text-[13px] leading-[1.5] text-[#e8e6ff]">
         Your explanation shows you now understand <strong className="font-semibold text-white">{joinLabels(labels)}</strong>.
@@ -135,7 +135,7 @@ export function SelfRating({
               className="inline-flex h-[38px] items-center gap-2 rounded-[10px] bg-[#4ecba0] px-4 text-[13px] font-semibold text-[#0d0e2a] transition-colors hover:bg-[#6ad8b2] disabled:cursor-default disabled:opacity-50"
             >
               {saving ? <LoaderCircle aria-hidden className="size-4 motion-safe:animate-spin" /> : null}
-              {saving ? "Saving…" : "Save rating"}
+              {saving ? "Saving…" : "Save Rating"}
             </button>
           </div>
         </>

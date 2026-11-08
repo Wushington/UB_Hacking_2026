@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Check, Eye, RotateCcw, Sparkles, X } from "lucide-react";
+import { Check, Eye, RotateCcw, X } from "lucide-react";
 import type { ReviewResult } from "@/contracts/study";
+import { HowItWorks } from "@/components/orbit/how-it-works";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { SaveStudyResults } from "@/lib/study/persistence";
@@ -21,7 +23,10 @@ type Props = {
 const panel = "flex flex-col rounded-[22px] bg-[#161730] shadow-[0_6px_24px_rgba(0,0,0,0.13)]";
 const eyebrow = "text-[10px] font-semibold tracking-[1.5px] uppercase text-[#9496bf]";
 const primary = "h-[46px] rounded-[12px] px-[18px] bg-[#ff5e7a] text-white text-[13px] font-semibold hover:bg-[#ff5e7a]/90 disabled:opacity-45";
+const primaryLink = cn("inline-flex w-full items-center justify-center gap-2", primary);
 const secondary = "h-[46px] rounded-[12px] px-[18px] bg-[#1e1f45] border border-[#333564] text-white text-[13px] font-semibold hover:bg-[#333564] disabled:opacity-45";
+
+const STUDY_STEPS = ["Read the question.", "Reveal the answer.", "Mark Got It or Missed."];
 
 export function StudySessionView({ deckTitle, subtitle, cards, onComplete, random, isSample = false }: Props) {
   const [session, setSession] = useState<StudySession | null>(null);
@@ -79,16 +84,14 @@ export function StudySessionView({ deckTitle, subtitle, cards, onComplete, rando
     <div className="flex-1 text-[#e8e6ff]">
       <div className="mx-auto flex max-w-[1328px] flex-col gap-7 px-4 pt-9 pb-8 sm:px-14">
         <header className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <p className={eyebrow}>{complete ? "Your study results" : "Study your flashcards"}</p>
-            <h1 className="text-3xl font-medium tracking-[-1.3px] text-white sm:text-[36px]">
-              {complete ? "A little clearer. A little closer." : "Let’s see what’s sticking."}
-            </h1>
-            <p className="text-sm text-[#9496bf]">
-              {complete ? `${deckTitle} · Completed just now` : "A little challenge from your notes. No timer, no pressure."}
-            </p>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h1 className="text-3xl font-medium tracking-[-1.3px] text-white sm:text-[36px]">{complete ? "Study Results" : "Study Flashcards"}</h1>
+            <p className="text-sm break-words text-[#9496bf]">{complete ? `${deckTitle} · Completed just now` : `${deckTitle} · ${subtitle}`}</p>
           </div>
-          {isSample && <Badge className="h-auto rounded-full bg-[#1e1f45] px-2.5 py-1 text-[11px] text-[#c1bedf]">Sample deck</Badge>}
+          <div className="flex flex-wrap items-center gap-2">
+            {isSample && <Badge className="h-auto rounded-full bg-[#1e1f45] px-2.5 py-1 text-[11px] text-[#c1bedf]">Sample deck</Badge>}
+            {total > 0 && !complete ? <HowItWorks steps={STUDY_STEPS} /> : null}
+          </div>
         </header>
 
         {!session ? (
@@ -102,7 +105,7 @@ export function StudySessionView({ deckTitle, subtitle, cards, onComplete, rando
           <div className="flex flex-col gap-6 lg:flex-row">
             <div className="flex flex-col gap-5 lg:w-[322px] lg:shrink-0">
               <section className={cn(panel, "gap-[19px] p-[26px]")}>
-                <h2 className={eyebrow}>Your understanding</h2>
+                <h2 className={eyebrow}>Score</h2>
                 <p className="text-[76px] leading-[1.1] tracking-[-5px] text-white">{score.percent}%</p>
                 <p className="text-sm">{score.correct} correct out of {score.total} cards</p>
                 <div className="flex flex-wrap gap-2 text-xs">
@@ -119,13 +122,14 @@ export function StudySessionView({ deckTitle, subtitle, cards, onComplete, rando
                     : "Ready to save."}
                 </p>
                 {onComplete && saveStatus === "error" && (
-                  <Button className={secondary} onClick={() => { savedSession.current = null; void save(session); }}>Try again</Button>
+                  <Button className={secondary} onClick={() => { savedSession.current = null; void save(session); }}>Try Again</Button>
                 )}
-                <Button className={cn(primary, "w-full")} onClick={restart}><RotateCcw aria-hidden="true" />Study again</Button>
+                {onComplete && score.missed > 0 && <Link href="/weak-concepts" className={primaryLink}>Review Weak Concepts</Link>}
+                <Button className={cn(onComplete && score.missed > 0 ? secondary : primary, "w-full")} onClick={restart}><RotateCcw aria-hidden="true" />Study Again</Button>
               </section>
             </div>
             <section className={cn(panel, "min-w-0 gap-3 p-6 lg:flex-1")}>
-              <h2 className="text-[21px] font-medium text-white">A closer look at your answers</h2>
+              <h2 className="text-[21px] font-medium text-white">Review Answers</h2>
               <ol>
                 {session.cards.map((reviewCard, index) => {
                   const correct = session.results[index].result === "got_it";
@@ -160,7 +164,7 @@ export function StudySessionView({ deckTitle, subtitle, cards, onComplete, rando
               <div className="flex flex-col gap-3">
                 <p className={eyebrow}>{card.conceptLabel}</p>
                 <h2 className="text-[28px] leading-[1.35] font-medium tracking-[-0.5px] break-words text-white">{card.question}</h2>
-                <p className="text-[13px] text-[#9496bf]">{session.revealed ? "Be honest — did you get it?" : "Think of your answer, then reveal it."}</p>
+                <p className="text-[13px] text-[#9496bf]">{session.revealed ? "Did you get it right?" : "Think of your answer, then reveal it."}</p>
               </div>
               {session.revealed && (
                 <div className="flex min-h-[66px] flex-col gap-2 rounded-[12px] border-[1.5px] border-[#ff5e7a] bg-[#2d244b] p-4">
@@ -170,25 +174,16 @@ export function StudySessionView({ deckTitle, subtitle, cards, onComplete, rando
               )}
               <div className="h-px bg-[#333564]" />
               <div className="flex flex-wrap justify-between gap-3">
-                <Button className={secondary} disabled={session.revealed} onClick={() => setSession(revealAnswer(session))}><Eye aria-hidden="true" />Reveal answer</Button>
+                <Button className={secondary} disabled={session.revealed} onClick={() => setSession(revealAnswer(session))}><Eye aria-hidden="true" />Reveal Answer</Button>
                 <div className="flex flex-wrap gap-2">
                   <Button className={secondary} disabled={!session.revealed} onClick={() => grade("missed")}><X aria-hidden="true" />Missed</Button>
-                  <Button className={primary} disabled={!session.revealed} onClick={() => grade("got_it")}><Check aria-hidden="true" />Got it</Button>
+                  <Button className={primary} disabled={!session.revealed} onClick={() => grade("got_it")}><Check aria-hidden="true" />Got It</Button>
                 </div>
               </div>
             </section>
-            <aside className="flex flex-col gap-[22px] lg:w-[400px] lg:shrink-0">
-              <section className={cn(panel, "gap-5 p-7")}>
-                <p className={eyebrow}>From your notes</p>
-                <div className="flex flex-col gap-2">
-                  <h2 className="text-[23px] text-white">{deckTitle}</h2>
-                  <p className="text-xs text-[#9496bf]">{subtitle}</p>
-                </div>
-                <div className="h-px bg-[#333564]" />
-                <div><p className="text-[26px] text-white">{total}</p><p className="text-[11px] text-[#9496bf]">Cards</p></div>
-              </section>
+            <aside className="flex flex-col gap-[22px] lg:w-[320px] lg:shrink-0">
               <section className={cn(panel, "gap-5 p-6")}>
-                <div className="flex items-center justify-between gap-2"><h2 className={eyebrow}>Your progress</h2><p className="text-xs text-[#9496bf]">{graded} / {total} done</p></div>
+                <div className="flex items-center justify-between gap-2"><h2 className={eyebrow}>Progress</h2><p className="text-xs text-[#9496bf]">{graded} / {total} done</p></div>
                 <div className="flex flex-wrap gap-2">
                   {session.cards.map((item, index) => {
                     const result = session.results[index]?.result;
@@ -197,10 +192,6 @@ export function StudySessionView({ deckTitle, subtitle, cards, onComplete, rando
                 </div>
                 <p className="text-[11px] text-[#9496bf]">Got it · Missed · Current · Up next</p>
               </section>
-              <div className="flex gap-2.5 p-4 text-xs text-[#9496bf]">
-                <Sparkles aria-hidden="true" className="size-[18px] shrink-0 text-[#ff5e7a]" />
-                <p>A missed card is useful. It shows you exactly what to revisit next.</p>
-              </div>
             </aside>
           </div>
         ) : null}

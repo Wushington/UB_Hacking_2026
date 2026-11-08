@@ -42,7 +42,7 @@ const FIGMA_FILLER = [/oxidative phosphorylation/i, /jamie/i, /BIO 201/];
 describe("ExplainAloudScreen", () => {
   it("renders the user's attempt and feedback", () => {
     render(<ExplainAloudScreen view={readyView} />);
-    expect(screen.getByRole("heading", { level: 1, name: /you’re making the connections/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Explain a Concept" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Cellular respiration" })).toBeInTheDocument();
     expect(screen.getByText("Biology")).toBeInTheDocument();
     expect(screen.getByText("Attempt 2 · Complete")).toBeInTheDocument();
@@ -55,6 +55,15 @@ describe("ExplainAloudScreen", () => {
     expect(screen.getByText("A suggested next attempt will appear here.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Play recording" })).toBeDisabled();
     expect(screen.getByRole("button", { name: /listen feedback read aloud/i })).toBeInTheDocument();
+  });
+
+  it("uses functional titles and offers help, with no decorative copy", () => {
+    const { container } = render(<ExplainAloudScreen view={emptyView("empty")} />);
+    expect(screen.getByText("Record an explanation and get AI feedback.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "AI Feedback" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Transcript" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "How It Works" })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/say it\. understand it|a little feedback|making the connections/i);
   });
 
   it("hides Listen when there is no feedback to read", () => {
@@ -79,7 +88,7 @@ describe("ExplainAloudScreen", () => {
   it("prompts a signed-out visitor to sign in", () => {
     render(<ExplainAloudScreen view={emptyView("signed-out")} />);
     expect(screen.getByText("Sign in to see your explanations and feedback.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /record an explanation/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /record explanation/i })).toBeDisabled();
   });
 
   it("shows spinners and skeletons while the attempt is analyzed", () => {
@@ -133,13 +142,13 @@ describe("ExplainAloudScreen", () => {
         concepts={[{ id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: view.lectureId! }]}
       />,
     );
-    expect(screen.getByRole("heading", { level: 1, name: "Explain it out loud." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Explain a Concept" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Give oxygen its specific role" })).toBeInTheDocument();
     expect(screen.getByText("Biology · Cellular respiration")).toBeInTheDocument();
     expect(screen.getByText(/explain this in your own words/i)).toBeInTheDocument();
     // Nothing recorded yet: no player, and the button starts a first attempt.
     expect(screen.queryByRole("button", { name: /play recording/i })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /record an explanation/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /record explanation/i })).toBeEnabled();
     for (const filler of FIGMA_FILLER) expect(container.textContent).not.toMatch(filler);
   });
 
@@ -156,7 +165,7 @@ describe("ExplainAloudScreen", () => {
 
   it("disables recording until the user has notes", () => {
     render(<ExplainAloudScreen view={emptyView("empty")} lectures={[]} />);
-    expect(screen.getByRole("button", { name: /record an explanation/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /record explanation/i })).toBeDisabled();
     expect(screen.getByText(/capture some notes first/i)).toBeInTheDocument();
   });
 });

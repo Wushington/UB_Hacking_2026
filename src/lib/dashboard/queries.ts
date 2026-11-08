@@ -4,7 +4,7 @@ import { getDb, schema } from "@/db";
 import { listWeakConcepts } from "@/lib/weak-concepts/store";
 import { dayLabel, quizAccuracy, studyStreak, type DashboardView } from "./view";
 
-const { audioRecordings, categories, lectureImages, lectures, studySessions } = schema;
+const { audioRecordings, categories, flashcardDecks, lectureImages, lectures, studySessions } = schema;
 
 const RECENT_NOTES = 3;
 const WEAK_CONCEPT_PREVIEW = 3;
@@ -13,7 +13,7 @@ const WEAK_CONCEPT_PREVIEW = 3;
 export async function getDashboardView(userId: string, firstName: string | null, now = new Date()): Promise<DashboardView> {
   const db = getDb();
 
-  const [classRows, [{ notesSaved }], recent, sessions, weak] = await Promise.all([
+  const [classRows, [{ notesSaved }], recent, sessions, weak, decks] = await Promise.all([
     db
       .select({ id: categories.id, name: categories.name, noteCount: count(lectures.id) })
       .from(categories)
@@ -34,6 +34,7 @@ export async function getDashboardView(userId: string, firstName: string | null,
       .from(studySessions)
       .where(and(eq(studySessions.userId, userId), eq(studySessions.status, "completed"))),
     listWeakConcepts(userId),
+    db.selectDistinct({ id: flashcardDecks.lectureId }).from(flashcardDecks).where(eq(flashcardDecks.userId, userId)),
   ]);
 
   // Label each recent note by what it was captured from.
@@ -49,6 +50,7 @@ export async function getDashboardView(userId: string, firstName: string | null,
     : [[], []];
   const imageIds = new Set(withImages.map((r) => r.id));
   const audioIds = new Set(withAudio.map((r) => r.id));
+  const deckIds = new Set(decks.map((r) => r.id));
 
   return {
     signedIn: true,
@@ -61,6 +63,7 @@ export async function getDashboardView(userId: string, firstName: string | null,
         sessions.flatMap((s) => (s.completedAt ? [s.completedAt] : [])),
         now,
       ),
+      decksGenerated: deckIds.size,
     },
     classes: classRows,
     recentNotes: recent.map((r) => ({
@@ -69,6 +72,7 @@ export async function getDashboardView(userId: string, firstName: string | null,
       className: r.className,
       source: imageIds.has(r.id) ? "Handwritten" : audioIds.has(r.id) ? "Audio" : "Notes",
       dayLabel: dayLabel(r.updatedAt, now),
+      hasFlashcards: deckIds.has(r.id),
     })),
     weakConcepts: weak.slice(0, WEAK_CONCEPT_PREVIEW).map((c) => ({
       id: c.id,

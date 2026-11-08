@@ -9,6 +9,7 @@ import {
   type ExplainAloudState,
   type ExplainAloudView,
 } from "@/lib/explain-aloud/view";
+import { HowItWorks } from "@/components/orbit/how-it-works";
 import { cn } from "@/lib/utils";
 import { ExplanationRecorder, type LectureOption } from "./explanation-recorder";
 import { GradingWatcher, RetryGradingButton } from "./grading-status";
@@ -35,35 +36,22 @@ const WAVEFORM = [
   8,
 ];
 
-const INTRO: Record<ExplainAloudState, { heading: string; body: string }> = {
-  ready: {
-    heading: "You’re making the connections.",
-    body: "Your explanation is complete. Here’s what landed, and what to try next.",
-  },
-  "no-feedback": {
-    heading: "Your explanation is saved.",
-    body: "Feedback isn’t available for this attempt yet.",
-  },
-  processing: {
-    heading: "Listening back to your explanation.",
-    body: "Hang tight. Your transcript and feedback are on their way.",
-  },
-  failed: {
-    heading: "We couldn’t analyze that attempt.",
-    body: "Try recording your explanation again.",
-  },
-  empty: {
-    heading: "Explain a concept out loud.",
-    body: "Record an explanation to see what landed and what to try next.",
-  },
-  "signed-out": {
-    heading: "Explain a concept out loud.",
-    body: "Sign in to see your explanations and feedback.",
-  },
-  loading: { heading: "Loading your explanation…", body: "Just a moment." },
-  "ready-to-record": {
-    heading: "Explain it out loud.",
-    body: "Record up to 2 minutes in your own words. We’ll check it against your class notes.",
+const INTRO: Record<ExplainAloudState, string> = {
+  ready: "Your feedback is ready.",
+  "no-feedback": "Your explanation is saved. Feedback isn’t available for this attempt yet.",
+  processing: "Analyzing your explanation.",
+  failed: "We couldn’t analyze that attempt. Try recording again.",
+  empty: "Record an explanation and get AI feedback.",
+  "signed-out": "Sign in to see your explanations and feedback.",
+  loading: "Loading your explanation…",
+  "ready-to-record": "Record up to 2 minutes in your own words. We’ll check it against your notes.",
+};
+
+const HOW_IT_WORKS = {
+  steps: ["Select a concept.", "Record your explanation.", "Review AI feedback."],
+  tip: {
+    title: "Before You Record",
+    body: "Allow microphone access when your browser asks. Recordings can be up to 2 minutes and are analyzed by AI. Feedback can make mistakes, so check it against your notes.",
   },
 };
 
@@ -257,7 +245,6 @@ export function ExplainAloudScreen({
   backHref = "/weak-concepts",
 }: ExplainAloudScreenProps) {
   const { state, course, concept, recording, transcript, recordedLabel, feedback } = view;
-  const intro = INTRO[state];
   /** Content is on its way: the attempt is being analyzed, or the page is still loading. */
   const pending = state === "processing" || state === "loading";
   // A selected concept (ready-to-record) isn't an attempt yet.
@@ -274,14 +261,16 @@ export function ExplainAloudScreen({
         aria-busy={state === "loading"}
       >
         <div className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-          <div className="flex min-w-0 flex-col gap-2">
-            <p className={eyebrowClass}>05 / SAY IT. UNDERSTAND IT.</p>
+          <div className="flex min-w-0 flex-col gap-1.5">
             <h1 className="text-[28px] leading-[1.15] font-medium tracking-[-1.3px] text-balance sm:text-[32px] lg:text-[36px]">
-              {intro.heading}
+              Explain a Concept
             </h1>
-            <p className="text-[14px] leading-[1.5] text-pretty text-[#9496bf]">{intro.body}</p>
+            <p className="text-[14px] leading-[1.5] text-pretty text-[#9496bf]">{INTRO[state]}</p>
           </div>
-          {course ? <Pill>{course}</Pill> : null}
+          <div className="flex flex-wrap items-center gap-2">
+            {course ? <Pill>{course}</Pill> : null}
+            <HowItWorks {...HOW_IT_WORKS} />
+          </div>
         </div>
 
         <div className="grid w-full grid-cols-1 items-start gap-[22px] lg:grid-cols-[minmax(0,636fr)_minmax(0,668fr)] lg:gap-6">
@@ -289,7 +278,7 @@ export function ExplainAloudScreen({
           <div className="flex w-full min-w-0 flex-col gap-[22px]">
             <section aria-label="Practice attempt" className={cardClass}>
               <div className="flex w-full flex-wrap items-start justify-between gap-2">
-                <p className={eyebrowClass}>YOUR SELECTED CONCEPT</p>
+                <p className={eyebrowClass}>SELECTED CONCEPT</p>
                 {concept?.attemptLabel ? <Pill tone={attemptTone(state)}>{concept.attemptLabel}</Pill> : null}
               </div>
               {concept ? (
@@ -321,8 +310,7 @@ export function ExplainAloudScreen({
 
             <section aria-label="Spoken response" className={cardClass}>
               <div className="flex w-full flex-wrap items-start justify-between gap-2">
-                <h2 className="text-[17px] leading-[1.5] font-medium sm:text-[19px]">In your own words</h2>
-                <Pill>Transcript</Pill>
+                <h2 className="text-[17px] leading-[1.5] font-medium sm:text-[19px]">Transcript</h2>
               </div>
               {transcript ? (
                 <p className="w-full text-[15px] leading-[1.85] break-words text-[#c1bedf] sm:text-[17px]">“{transcript}”</p>
@@ -354,7 +342,7 @@ export function ExplainAloudScreen({
             <div className="flex w-full flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2.5">
                 <Icon name="sparkles" width={22} height={22} />
-                <h2 className="text-[18px] leading-[1.5] font-medium sm:text-[21px]">A little feedback from AI</h2>
+                <h2 className="text-[18px] leading-[1.5] font-medium sm:text-[21px]">AI Feedback</h2>
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {listenRecordingId ? <ListenButton recordingId={listenRecordingId} /> : null}
@@ -420,7 +408,7 @@ export function ExplainAloudScreen({
                 <SkeletonLines widths={["45%", "92%", "64%"]} />
               ) : (
                 <Placeholder bordered={false}>
-                  {feedback ? "No gaps found in this explanation. Nice work." : "Gaps in your explanation will show up here."}
+                  {feedback ? "No gaps found in this explanation." : "Gaps in your explanation will show up here."}
                 </Placeholder>
               )}
             </div>

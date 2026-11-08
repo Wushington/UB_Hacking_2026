@@ -1,7 +1,7 @@
-/** One row of the Quizzes page: a lecture and how studying its latest flashcard deck has gone. */
-export type QuizRow = {
-  lectureId: string;
-  title: string;
+import type { SubjectLecture } from "@/components/subjects/subjects-layout";
+
+/** How studying a lecture's latest flashcard deck has gone. */
+type DeckStats = {
   /** Cards in the latest deck; null when no deck has been generated yet. */
   cardCount: number | null;
   /** Completed sessions on the latest deck. */
@@ -10,11 +10,13 @@ export type QuizRow = {
   lastScore: number | null;
 };
 
-type LectureRow = { id: string; title: string; updatedAt: Date };
+/** One deck on the Flashcards page: a lecture (with its subject) and its study results. */
+export type QuizRow = SubjectLecture & DeckStats;
+
 type DeckRow = { id: string; lectureId: string; createdAt: Date; cardCount: number };
 type SessionRow = { deckId: string; correctCount: number; totalCount: number; completedAt: Date | null };
 
-export function toQuizRows(lectures: LectureRow[], decks: DeckRow[], sessions: SessionRow[]): QuizRow[] {
+export function toQuizRows<L extends { id: string; updatedAt: Date }>(lectures: L[], decks: DeckRow[], sessions: SessionRow[]): (L & DeckStats)[] {
   const latestDeck = new Map<string, DeckRow>();
   for (const deck of decks) {
     const current = latestDeck.get(deck.lectureId);
@@ -29,8 +31,7 @@ export function toQuizRows(lectures: LectureRow[], decks: DeckRow[], sessions: S
         .sort((a, b) => b.completedAt!.getTime() - a.completedAt!.getTime());
       const last = done[0];
       return {
-        lectureId: lecture.id,
-        title: lecture.title,
+        ...lecture,
         cardCount: deck ? deck.cardCount : null,
         sessionCount: done.length,
         lastScore: last && last.totalCount ? Math.round((last.correctCount / last.totalCount) * 100) : null,

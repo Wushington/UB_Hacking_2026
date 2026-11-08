@@ -73,7 +73,7 @@ describe("ExplanationRecorder", () => {
     uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
     renderRecorder();
 
-    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     expect(await screen.findByRole("button", { name: /stop/i })).toBeInTheDocument();
     expect(FakeRecorder.last?.options.mimeType).toBe("audio/webm;codecs=opus");
     expect(screen.getByText("For Cellular respiration")).toBeInTheDocument();
@@ -89,7 +89,7 @@ describe("ExplanationRecorder", () => {
     expect(arg.lectureId).toBe(LECTURES[0].id);
     expect(arg.blob.size).toBeGreaterThan(0);
     // Navigation (mocked) settles immediately: the "opening" panel closes and recording is available again.
-    expect(await screen.findByRole("button", { name: /record an explanation/i })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: /record explanation/i })).toBeEnabled();
     expect(screen.queryByText(/opening your attempt/i)).not.toBeInTheDocument();
   });
 
@@ -100,17 +100,17 @@ describe("ExplanationRecorder", () => {
     });
     uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
     renderRecorder();
-    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
     await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
     expect(await screen.findByRole("status")).toHaveTextContent("Opening your attempt…");
     expect(screen.getByRole("heading", { name: "Uploaded" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /record an explanation/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /record explanation/i })).not.toBeInTheDocument();
   });
 
   it("asks which notes when there are several and no current one", async () => {
     renderRecorder({ lectures: LECTURES, defaultLectureId: null });
-    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     expect(getUserMedia).not.toHaveBeenCalled();
     await userEvent.selectOptions(screen.getByLabelText(/which notes/i), LECTURES[1].id);
     await userEvent.click(screen.getByRole("button", { name: /start recording/i }));
@@ -121,7 +121,7 @@ describe("ExplanationRecorder", () => {
   it("explains a blocked microphone", async () => {
     getUserMedia.mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"));
     renderRecorder();
-    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/microphone access is blocked/i);
   });
 
@@ -129,7 +129,7 @@ describe("ExplanationRecorder", () => {
     const { UploadError } = await import("./upload-explanation");
     uploadExplanation.mockRejectedValue(new UploadError("Notes not found"));
     renderRecorder();
-    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
     await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Notes not found");
@@ -144,7 +144,7 @@ describe("ExplanationRecorder", () => {
       { id: "c2", conceptKey: "light-reactions", label: "Light reactions", lectureId: LECTURES[1].id },
     ];
     renderRecorder({ concepts });
-    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     expect(getUserMedia).not.toHaveBeenCalled();
 
     const select = screen.getByLabelText(/which concept/i);
@@ -166,7 +166,7 @@ describe("ExplanationRecorder", () => {
     uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
     const concepts = [{ id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: LECTURES[0].id }];
     renderRecorder({ concepts, defaultConceptKey: "oxygen-final-electron-acceptor" });
-    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     expect(await screen.findByRole("button", { name: /stop/i })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /stop/i }));
     await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
@@ -177,7 +177,7 @@ describe("ExplanationRecorder", () => {
   it("sends no concept for a free explanation", async () => {
     uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
     renderRecorder();
-    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
     await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
     await waitFor(() => expect(uploadExplanation).toHaveBeenCalled());
@@ -186,7 +186,7 @@ describe("ExplanationRecorder", () => {
 
   it("is disabled with a hint when the user has no classes", () => {
     renderRecorder({ lectures: [], defaultLectureId: null });
-    expect(screen.getByRole("button", { name: /record an explanation/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /record explanation/i })).toBeDisabled();
     expect(screen.getByText(/capture some notes first/i)).toBeInTheDocument();
   });
 });

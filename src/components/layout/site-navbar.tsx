@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 /** `also` lists other paths that count as this section; `matches` covers dynamic ones. */
 type NavItem = { label: string; href?: string; also?: string[]; matches?: (pathname: string) => boolean };
 
-/** A lecture's flashcard study page belongs to Quizzes. */
+/** A lecture's flashcard study page belongs to Flashcards. */
 const isStudyPage = (pathname: string) => /^\/lectures\/[^/]+\/study$/.test(pathname);
 /** A set of notes belongs to My subjects. */
 const isNotesPage = (pathname: string) => /^\/lectures\/[^/]+$/.test(pathname);
@@ -18,11 +18,12 @@ const isNotesPage = (pathname: string) => /^\/lectures\/[^/]+$/.test(pathname);
 /** `href` is omitted for sections that don't have a page yet; they render as "Soon" labels, not dead links. */
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/" },
-  // Capturing and a set of notes belong to My subjects (their flashcards belong to Quizzes).
-  { label: "My subjects", href: "/subjects", also: ["/capture"], matches: isNotesPage },
-  { label: "Quizzes", href: "/quizzes", matches: isStudyPage },
+  { label: "Capture Notes", href: "/capture" },
+  // A set of notes belongs to My Subjects (its flashcards belong to Flashcards).
+  { label: "My Subjects", href: "/subjects", matches: isNotesPage },
+  { label: "Flashcards", href: "/quizzes", matches: isStudyPage },
   // Opens the list of weak concepts; practising one on the explain page keeps this section highlighted.
-  { label: "Weak concepts", href: "/weak-concepts", also: ["/explain"] },
+  { label: "Weak Concepts", href: "/weak-concepts", also: ["/explain"] },
 ];
 
 const isCurrent = (href: string, pathname: string) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`));
@@ -65,6 +66,8 @@ function NavLinks({ pathname }: { pathname: string }) {
             key={label}
             href={href}
             aria-current={active ? "page" : undefined}
+            // On phones the links scroll sideways: keep the current page's link in view.
+            ref={active ? (link) => { if (link?.parentElement) link.parentElement.scrollLeft = link.offsetLeft - link.parentElement.offsetLeft; } : undefined}
             className={cn(itemClass, active ? "bg-orbit-accent font-semibold text-white" : "text-orbit-muted hover:text-white")}
           >
             {label}

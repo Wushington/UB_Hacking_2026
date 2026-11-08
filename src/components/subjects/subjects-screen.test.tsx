@@ -47,6 +47,13 @@ beforeEach(() => refresh.mockClear());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("SubjectsScreen", () => {
+  it("titles the page My Subjects without decorative copy", () => {
+    stubFetch();
+    const { container } = renderScreen();
+    expect(screen.getByRole("heading", { level: 1, name: "My Subjects" })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/everything you’ve captured/i);
+  });
+
   it("shows No subject first, subjects outside dividers, then each divider with its subjects", () => {
     renderScreen();
     const regions = screen.getAllByRole("region").map((r) => r.getAttribute("aria-label"));

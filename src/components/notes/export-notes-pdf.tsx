@@ -43,7 +43,7 @@ export function ExportNotesPdf({ title, subject }: { title: string; subject?: st
 
   return (
     <div className="flex flex-col items-start gap-2">
-      <button type="button" onClick={() => void exportPdf()} disabled={busy} title="Open a print-ready copy and choose Save as PDF" className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#ff5e7a] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#ff7891] disabled:opacity-50">
+      <button type="button" onClick={() => void exportPdf()} disabled={busy} title="Open a print-ready copy and choose Save as PDF" className="inline-flex h-10 items-center justify-center gap-2 rounded-[10px] border border-[#333564] bg-[#1e1f45] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#2a2b5a] disabled:opacity-50">
         <FileDown size={16} aria-hidden="true" />{busy ? "Preparing PDF…" : "Export PDF"}
       </button>
       {error && <p role="alert" className="max-w-xs text-xs text-[#ffb4c1]">{error}</p>}

@@ -25,8 +25,7 @@ export function RocketLaunch() {
         <span className="orbit-launch-flame" />
       </div>
       <div className="orbit-launch-caption" role="status">
-        <h1 id="launch-heading">You’re cleared for takeoff.</h1>
-        <p>Your next big idea awaits.</p>
+        <h1 id="launch-heading">Opening your dashboard…</h1>
       </div>
       <Link href="/" className="orbit-text-link">Skip to dashboard →</Link>
     </section>

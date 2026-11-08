@@ -16,7 +16,7 @@ export function AuthShell({ children, salmon = false, showBackToHome = true }: {
       </header>
       <div className="orbit-content">
         {children}
-        <p className="orbit-reassurance"><DesignIcon name="book" />Your notes, flashcards, and next big idea await.</p>
+        <p className="orbit-reassurance"><DesignIcon name="book" />Turn whiteboard photos into notes and flashcards.</p>
       </div>
       <footer className="orbit-footer">
         <span>© 2026 Orbit Study</span>

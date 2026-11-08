@@ -310,7 +310,7 @@ export function ExplanationRecorder({
 							style={{ width: 18, height: 18 }}
 							className="block max-w-none"
 						/>
-						{hasAttempt ? "Record another attempt" : "Record an explanation"}
+						{hasAttempt ? "Record Another Attempt" : "Record Explanation"}
 					</button>
 				:	null}
 			</div>
@@ -337,12 +337,12 @@ export function ExplanationRecorder({
 					<div className="flex flex-wrap items-center justify-between gap-2">
 						<h2 className="text-[17px] leading-[1.5] font-medium sm:text-[19px]">
 							{phase === "recorded" ?
-								"Review your explanation"
+								"Review Your Explanation"
 							: phase === "uploading" ?
 								"Uploading…"
 							: phase === "opening" ?
 								"Uploaded"
-							:	"Explain it out loud"}
+							:	"Record Explanation"}
 						</h2>
 						<span className="text-[12px] leading-[1.5] text-[#9496bf]">
 							Up to {formatClock(MAX_MS)}
@@ -486,7 +486,7 @@ export function ExplanationRecorder({
 									className={primaryButton}
 								>
 									<Mic aria-hidden className="size-[18px]" />
-									Start recording
+									Start Recording
 								</button>
 							</>
 						:	null}
@@ -540,7 +540,7 @@ export function ExplanationRecorder({
 											className="size-[18px] animate-spin"
 										/>
 									:	<Upload aria-hidden className="size-[18px]" />}
-									{phase === "uploading" ? "Uploading…" : "Submit for feedback"}
+									{phase === "uploading" ? "Uploading…" : "Submit for Feedback"}
 								</button>
 							</>
 						:	null}

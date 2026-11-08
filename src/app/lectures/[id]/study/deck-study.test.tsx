@@ -14,7 +14,7 @@ beforeEach(() => {
 async function finish() {
   const user = userEvent.setup();
   render(<DeckStudy deckId="deck-1" deckTitle="Bio" subtitle="1 card" cards={[card]} />);
-  await user.click(await screen.findByRole("button", { name: "Reveal answer" }));
+  await user.click(await screen.findByRole("button", { name: "Reveal Answer" }));
   await user.click(screen.getByRole("button", { name: "Missed" }));
 }
 
@@ -34,6 +34,6 @@ describe("DeckStudy", () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 500 }));
     await finish();
     expect(await screen.findByText("Couldn't save this session. Please try again.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Try Again" })).toBeInTheDocument();
   });
 });

@@ -75,7 +75,7 @@ export function RetryGradingButton({ recordingId }: { recordingId: string }) {
       className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#1e1f45] px-3 py-[5px] text-[11px] leading-[1.5] font-medium whitespace-nowrap text-[#e8e6ff] transition-colors hover:bg-[#2a2b5a] disabled:opacity-60"
     >
       {busy ? <LoaderCircle aria-hidden className="size-3.5 animate-spin" /> : <RotateCcw aria-hidden className="size-3.5" />}
-      {error ? "Retry failed, try again" : busy ? "Retrying…" : "Try analysis again"}
+      {error ? "Retry failed, try again" : busy ? "Retrying…" : "Try Analysis Again"}
     </button>
   );
 }

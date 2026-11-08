@@ -58,7 +58,7 @@ export function FlashcardGenerator({ lectureId, hasExistingDeck }: { lectureId: 
   return (
     <form noValidate onSubmit={submit} className="flex flex-col gap-4 rounded-[22px] bg-[#161730] p-6 text-[#e8e6ff]">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2 sm:w-[220px]">
           <Label htmlFor={inputId}>Number of flashcards</Label>
           <Input id={inputId} type="number" min={MIN_FLASHCARDS} max={MAX_FLASHCARDS} step={1}
             value={value} onChange={(event) => setValue(event.target.value)}
@@ -66,7 +66,7 @@ export function FlashcardGenerator({ lectureId, hasExistingDeck }: { lectureId: 
             className="h-[46px] rounded-[12px] border-[#333564] bg-[#0d0e2a] text-white" />
         </div>
         <Button type="submit" disabled={generating} className="h-[46px] rounded-[12px] bg-[#ff5e7a] px-[18px] text-[13px] font-semibold text-white hover:bg-[#ff5e7a]/90 disabled:opacity-45">
-          {generating ? "Generating…" : hasExistingDeck ? "Generate a new deck" : "Generate flashcards"}
+          {generating ? "Generating…" : hasExistingDeck ? "Generate a New Deck" : "Generate Flashcards"}
         </Button>
       </div>
       {error && <p id={`${inputId}-error`} role="alert" className="text-sm text-[#ff5e7a]">{error}</p>}

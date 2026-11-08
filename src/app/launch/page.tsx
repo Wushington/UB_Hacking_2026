@@ -11,5 +11,5 @@ async function Launch() {
 }
 
 export default function LaunchPage() {
-  return <AuthShell salmon><Suspense fallback={<p role="status">Preparing your orbit…</p>}><Launch /></Suspense></AuthShell>;
+  return <AuthShell salmon><Suspense fallback={<p role="status">Loading…</p>}><Launch /></Suspense></AuthShell>;
 }

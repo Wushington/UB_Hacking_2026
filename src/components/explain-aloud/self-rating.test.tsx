@@ -25,7 +25,7 @@ describe("SelfRating", () => {
     render(<SelfRating recordingId={ID} mastered={MASTERED} selfRating={null} />);
     expect(screen.getByText("Give oxygen its specific role")).toBeInTheDocument();
 
-    const save = screen.getByRole("button", { name: "Save rating" });
+    const save = screen.getByRole("button", { name: "Save Rating" });
     expect(save).toBeDisabled();
     await userEvent.click(screen.getByRole("radio", { name: "5, Nailed it" }));
     expect(screen.getByRole("radio", { name: "5, Nailed it" })).toHaveAttribute("aria-checked", "true");
@@ -48,7 +48,7 @@ describe("SelfRating", () => {
     fetchMock.mockResolvedValue(Response.json({ error: "You’ve already rated this attempt" }, { status: 409 }));
     render(<SelfRating recordingId={ID} mastered={MASTERED} selfRating={null} />);
     await userEvent.click(screen.getByRole("radio", { name: "3, Getting there" }));
-    await userEvent.click(screen.getByRole("button", { name: "Save rating" }));
+    await userEvent.click(screen.getByRole("button", { name: "Save Rating" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("You’ve already rated this attempt");
     expect(refresh).not.toHaveBeenCalled();
   });

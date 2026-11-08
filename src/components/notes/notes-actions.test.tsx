@@ -31,7 +31,7 @@ describe("NotesActions", () => {
     const user = userEvent.setup();
     render(<NotesActions lectureId={id(9)} subjects={subjects} subjectId={id(1)} />);
 
-    const change = screen.getByRole("button", { name: "Change subject" });
+    const change = screen.getByRole("button", { name: "Change Subject" });
     expect(change).toBeDisabled(); // nothing changed yet
     await user.selectOptions(screen.getByLabelText("Subject"), "Calculus II");
     await user.click(change);
@@ -49,12 +49,12 @@ describe("NotesActions", () => {
     render(<NotesActions lectureId={id(9)} subjects={subjects} subjectId={null} />);
 
     await user.selectOptions(screen.getByLabelText("Subject"), "+ New subject…");
-    await user.click(screen.getByRole("button", { name: "Change subject" }));
+    await user.click(screen.getByRole("button", { name: "Change Subject" }));
     expect(screen.getByRole("alert")).toHaveTextContent(/name your new subject/i);
     expect(fetchMock).not.toHaveBeenCalled();
 
     await user.type(screen.getByLabelText("New subject name"), "Physics");
-    await user.click(screen.getByRole("button", { name: "Change subject" }));
+    await user.click(screen.getByRole("button", { name: "Change Subject" }));
     expect(JSON.parse(String((fetchMock.mock.calls[0][1] as RequestInit).body))).toEqual({ category: { name: "Physics" } });
   });
 
@@ -64,7 +64,7 @@ describe("NotesActions", () => {
     render(<NotesActions lectureId={id(9)} subjects={subjects} subjectId={id(1)} />);
 
     await user.click(screen.getByRole("button", { name: /delete notes/i }));
-    expect(screen.getByRole("alertdialog")).toHaveTextContent(/flashcards, quiz history and explanations/i);
+    expect(screen.getByRole("alertdialog")).toHaveTextContent(/flashcards, study history and explanations/i);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(fetchMock).not.toHaveBeenCalled();
 
