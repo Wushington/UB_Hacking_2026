@@ -341,7 +341,7 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                 <p>
                   {state === "loading"
                     ? "Loading your feedback…"
-                    : "Comparing your explanation with your class notes. This usually takes 10–30 seconds."}
+                    : "Comparing your explanation with your notes. This usually takes 10–30 seconds."}
                 </p>
               </div>
             ) : null}

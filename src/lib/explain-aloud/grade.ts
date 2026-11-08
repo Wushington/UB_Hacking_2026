@@ -157,13 +157,13 @@ async function markFailed(recordingId: string, reason: string) {
 export async function runGrading(recording: Recording): Promise<"ready" | "failed"> {
   try {
     if (!recording.lectureId) {
-      await markFailed(recording.id, "recording has no class");
+      await markFailed(recording.id, "recording has no notes");
       return "failed";
     }
     const notes = await loadNotes(recording.userId, recording.lectureId);
     const blockIds = new Set(notes?.sections.flatMap((s) => s.blocks.map((b) => b.id)) ?? []);
     if (!notes || blockIds.size === 0) {
-      await markFailed(recording.id, "class has no notes to compare against");
+      await markFailed(recording.id, "notes are empty, nothing to compare against");
       return "failed";
     }
 

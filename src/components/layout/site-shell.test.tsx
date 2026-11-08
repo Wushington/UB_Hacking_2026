@@ -44,9 +44,9 @@ describe("SiteShell", () => {
     ["/", "Home"],
     ["/weak-concepts", "Weak concepts"],
     ["/explain", "Weak concepts"],
-    ["/classes", "My classes"],
-    ["/capture", "My classes"],
-    ["/lectures/abc", "My classes"],
+    ["/subjects", "My subjects"],
+    ["/capture", "My subjects"],
+    ["/lectures/abc", "My subjects"],
     ["/quizzes", "Quizzes"],
     ["/lectures/abc/study", "Quizzes"],
   ])("marks the current section on %s", (pathname, label) => {
@@ -59,7 +59,7 @@ describe("SiteShell", () => {
   it("labels unbuilt sections and controls as coming soon instead of linking nowhere", () => {
     renderShell("/");
     const main = screen.getByRole("navigation", { name: "Main" });
-    expect(within(main).getByRole("link", { name: "My classes" })).toHaveAttribute("href", "/classes");
+    expect(within(main).getByRole("link", { name: "My subjects" })).toHaveAttribute("href", "/subjects");
     expect(within(main).getByRole("link", { name: "Quizzes" })).toHaveAttribute("href", "/quizzes");
     for (const name of [/search/i, /notifications/i]) {
       const control = screen.getByRole("button", { name });
@@ -84,7 +84,7 @@ describe("SiteShell", () => {
     renderShell("/explain");
     const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: /learning loop/i });
     expect(within(loop).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "01  /  Capture a class→",
+      "01  /  Capture a subject→",
       "02  /  Organize notes→",
       "03  /  Take a quiz→",
       "04  /  Find the gaps→",
@@ -94,7 +94,7 @@ describe("SiteShell", () => {
   });
 
   it.each([
-    ["/capture", "Capture a class"],
+    ["/capture", "Capture a subject"],
     ["/lectures/abc", "Organize notes"],
     ["/lectures/abc/study", "Take a quiz"],
   ])("highlights the learning-loop step for %s", (pathname, step) => {

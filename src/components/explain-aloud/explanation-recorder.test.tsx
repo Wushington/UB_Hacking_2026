@@ -108,11 +108,11 @@ describe("ExplanationRecorder", () => {
     expect(screen.queryByRole("button", { name: /record an explanation/i })).not.toBeInTheDocument();
   });
 
-  it("asks which class when there are several and no current one", async () => {
+  it("asks which notes when there are several and no current one", async () => {
     renderRecorder({ lectures: LECTURES, defaultLectureId: null });
     await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
     expect(getUserMedia).not.toHaveBeenCalled();
-    await userEvent.selectOptions(screen.getByLabelText(/which class/i), LECTURES[1].id);
+    await userEvent.selectOptions(screen.getByLabelText(/which notes/i), LECTURES[1].id);
     await userEvent.click(screen.getByRole("button", { name: /start recording/i }));
     await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
     expect(screen.getByText("For Photosynthesis")).toBeInTheDocument();
@@ -127,19 +127,19 @@ describe("ExplanationRecorder", () => {
 
   it("keeps the take and shows the error when the upload fails", async () => {
     const { UploadError } = await import("./upload-explanation");
-    uploadExplanation.mockRejectedValue(new UploadError("Class not found"));
+    uploadExplanation.mockRejectedValue(new UploadError("Notes not found"));
     renderRecorder();
     await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
     await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
     await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Class not found");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Notes not found");
     expect(screen.getByRole("button", { name: /submit for feedback/i })).toBeEnabled();
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("is disabled with a hint when the user has no classes", () => {
+  it("is disabled with a hint when the user has no notes", () => {
     renderRecorder({ lectures: [], defaultLectureId: null });
     expect(screen.getByRole("button", { name: /record an explanation/i })).toBeDisabled();
-    expect(screen.getByText(/add a class first/i)).toBeInTheDocument();
+    expect(screen.getByText(/capture some notes first/i)).toBeInTheDocument();
   });
 });

@@ -10,7 +10,7 @@ export type GradingNotes = {
 
 /** Notes as plain text with each block's id, so Gemini can cite exactly what a gap refers to. */
 export function formatNotes(notes: GradingNotes): string {
-  const lines = [`Class: ${notes.lectureTitle}`];
+  const lines = [`Notes: ${notes.lectureTitle}`];
   for (const section of notes.sections) {
     lines.push("", `## ${section.heading}`);
     for (const block of section.blocks) lines.push(`[${block.id}] (${block.kind}) ${block.text}`);
@@ -19,10 +19,10 @@ export function formatNotes(notes: GradingNotes): string {
 }
 
 export function buildGradingPrompt(notes: GradingNotes): string {
-  return `You are a warm, precise study coach. The attached audio is a student explaining a concept from their class out loud, in their own words (up to 2 minutes).
+  return `You are a warm, precise study coach. The attached audio is a student explaining a concept from their notes out loud, in their own words (up to 2 minutes).
 
 1. Transcribe the student's speech faithfully into "transcriptText". Remove filler words (um, uh), keep everything else. If there is no intelligible speech, return an empty transcriptText and no weakPoints.
-2. Compare the explanation with the class notes below. Report the most important gaps: ideas from the notes that the student left out, stated vaguely, or got wrong, and that matter for understanding the concept they chose to explain. Don't flag topics they didn't attempt to cover, phrasing, accent, or filler. If the explanation is solid, return an empty weakPoints list.
+2. Compare the explanation with the notes below. Report the most important gaps: ideas from the notes that the student left out, stated vaguely, or got wrong, and that matter for understanding the concept they chose to explain. Don't flag topics they didn't attempt to cover, phrasing, accent, or filler. If the explanation is solid, return an empty weakPoints list.
 
 For each weak point (at most ${MAX_WEAK_POINTS}, most important first):
 - conceptKey: a short, stable, lowercase kebab-case id for the underlying idea, e.g. "oxygen-final-electron-acceptor". Use the same key for the same idea on every attempt.
@@ -37,7 +37,7 @@ For each weak point (at most ${MAX_WEAK_POINTS}, most important first):
 - nextStep: one concrete instruction for their next 45–60 second attempt, e.g. "Walk through the energy relay again: electrons → H⁺ gradient → ATP, then finish with what oxygen does."
 If there is no intelligible speech, leave summary and nextStep empty and covered empty.
 
-Class notes:
+Notes:
 ${formatNotes(notes)}`;
 }
 

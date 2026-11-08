@@ -12,14 +12,14 @@ type NavItem = { label: string; href?: string; also?: string[]; matches?: (pathn
 
 /** A lecture's flashcard study page belongs to Quizzes. */
 const isStudyPage = (pathname: string) => /^\/lectures\/[^/]+\/study$/.test(pathname);
-/** A lecture's notes page belongs to My classes. */
+/** A set of notes belongs to My subjects. */
 const isNotesPage = (pathname: string) => /^\/lectures\/[^/]+$/.test(pathname);
 
 /** `href` is omitted for sections that don't have a page yet; they render as "Soon" labels, not dead links. */
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/" },
-  // Capturing a class and a lecture's notes page belong to My classes (its flashcards belong to Quizzes).
-  { label: "My classes", href: "/classes", also: ["/capture"], matches: isNotesPage },
+  // Capturing and a set of notes belong to My subjects (their flashcards belong to Quizzes).
+  { label: "My subjects", href: "/subjects", also: ["/capture"], matches: isNotesPage },
   { label: "Quizzes", href: "/quizzes", matches: isStudyPage },
   // Weak concepts are practised on the explain page; the full list stays reachable at /weak-concepts.
   { label: "Weak concepts", href: "/explain", also: ["/weak-concepts"] },

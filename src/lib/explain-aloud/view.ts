@@ -136,7 +136,7 @@ const ATTEMPT_STATUS: Record<ExplainAloudState, string | null> = {
 
 export function toExplainAloudView(rows: ExplainAloudRows): ExplainAloudView {
   const state = stateFor(rows);
-  const title = rows.lecture?.title.trim() || "Untitled class";
+  const title = rows.lecture?.title.trim() || "Untitled notes";
   const status = ATTEMPT_STATUS[state];
 
   const transcript =

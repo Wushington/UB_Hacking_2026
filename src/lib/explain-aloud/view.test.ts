@@ -82,7 +82,7 @@ describe("toExplainAloudView", () => {
       rows({ categoryName: null, lecture: null, recording: { ...rows().recording, durationMs: null } }),
     );
     expect(view.course).toBeNull();
-    expect(view.concept?.title).toBe("Untitled class");
+    expect(view.concept?.title).toBe("Untitled notes");
     expect(view.lectureId).toBeNull();
     expect(view.concept?.breadcrumb).toBeNull();
     expect(view.recording?.durationSeconds).toBeNull();

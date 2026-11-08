@@ -76,9 +76,9 @@ function Overview({ view }: { view: DashboardView }) {
       </dl>
 
       <div className="flex flex-col gap-3">
-        <h2 className={eyebrow}>My classes</h2>
+        <h2 className={eyebrow}>My subjects</h2>
         {classes.length === 0 ? (
-          <Empty>Classes you save notes to will appear here.</Empty>
+          <Empty>Subjects you save notes to will appear here.</Empty>
         ) : (
           <ul className="flex flex-col gap-1">
             {classes.map((c) => (
@@ -94,8 +94,8 @@ function Overview({ view }: { view: DashboardView }) {
             ))}
           </ul>
         )}
-        <Link href="/classes" className={textLink}>
-          View all classes <ChevronRight aria-hidden className="size-3.5" />
+        <Link href="/subjects" className={textLink}>
+          View all subjects <ChevronRight aria-hidden className="size-3.5" />
         </Link>
       </div>
 
@@ -153,7 +153,7 @@ function Capture() {
         </Link>
         <CaptureOption label="Upload lecture audio" formats="MP3, M4A or WAV" icon={AudioLines} />
       </div>
-      <p className="text-[11px] text-orbit-muted">You’ll choose which class each upload is saved to. Lecture audio is coming soon.</p>
+      <p className="text-[11px] text-orbit-muted">You’ll choose which subject each upload is saved to. Lecture audio is coming soon.</p>
     </section>
   );
 }
@@ -303,7 +303,7 @@ export function DashboardScreen({ view, className }: { view: DashboardView; clas
             A little closer to your next aha{name}.
           </h1>
           <p className="text-[14px] text-orbit-muted">
-            {view.signedIn ? "Capture a class. Connect the dots. Make it stick." : "Sign in to capture classes, track quizzes and find your gaps."}
+            {view.signedIn ? "Capture a subject. Connect the dots. Make it stick." : "Sign in to capture subjects, track quizzes and find your gaps."}
           </p>
         </div>
         {streak > 0 ? (

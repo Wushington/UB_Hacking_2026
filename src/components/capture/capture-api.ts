@@ -67,16 +67,16 @@ const postJson = (fetchImpl: typeof fetch, url: string, body: unknown) =>
 
 export async function createLecture(category: CreateLecture["category"], fetchImpl: typeof fetch = fetch): Promise<string> {
   const res = await postJson(fetchImpl, "/api/lectures", { category });
-  if (!res.ok) throw new CaptureError(await serverMessage(res, "Couldn’t create the class. Please try again."));
+  if (!res.ok) throw new CaptureError(await serverMessage(res, "Couldn’t create your notes. Please try again."));
   return createLectureResponseSchema.parse(await res.json()).id;
 }
 
-/** Best-effort cleanup of an abandoned attempt (draft/failed class). Never throws. */
+/** Best-effort cleanup of an abandoned attempt. `unfinished=1`: the server never deletes generated notes here. */
 export async function discardLecture(lectureId: string, fetchImpl: typeof fetch = fetch): Promise<void> {
   try {
-    await fetchImpl(`/api/lectures/${lectureId}`, { method: "DELETE" });
+    await fetchImpl(`/api/lectures/${lectureId}?unfinished=1`, { method: "DELETE" });
   } catch {
-    // Leaving an unfinished class behind is harmless; it shows as "Needs another try" in My classes.
+    // Leaving an unfinished attempt behind is harmless; it shows as "Needs another try" in My subjects.
   }
 }
 
@@ -119,7 +119,7 @@ export async function processLecture(lectureId: string, imageIds: string[], fetc
   if (res.status === 409) {
     const message = await serverMessage(res, "");
     if (/already generated/i.test(message)) return;
-    throw new CaptureError(message || "This class is already being organized.");
+    throw new CaptureError(message || "These notes are already being organized.");
   }
   // This route only returns messages written for students (never raw upstream errors), so show them for 5xx too.
   let message = "";

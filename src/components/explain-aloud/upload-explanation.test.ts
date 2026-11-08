@@ -41,8 +41,8 @@ describe("uploadExplanation", () => {
   });
 
   it("surfaces the server's message for client errors", async () => {
-    const fetchImpl = fakeFetch({ finalize: Response.json({ error: "Class not found" }, { status: 404 }) });
-    await expect(uploadExplanation(input(), fetchImpl)).rejects.toThrow("Class not found");
+    const fetchImpl = fakeFetch({ finalize: Response.json({ error: "Notes not found" }, { status: 404 }) });
+    await expect(uploadExplanation(input(), fetchImpl)).rejects.toThrow("Notes not found");
   });
 
   it("hides server-side failure details", async () => {

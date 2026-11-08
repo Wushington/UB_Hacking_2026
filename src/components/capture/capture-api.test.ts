@@ -66,7 +66,7 @@ const photo = (n: number, extra: Partial<QueuedPhoto> = {}): QueuedPhoto => ({
 });
 
 describe("organizeNotes", () => {
-  it("creates the class, uploads each photo in order, then processes them", async () => {
+  it("creates the notes, uploads each photo in order, then processes them", async () => {
     const { calls, fetchImpl } = backend();
     const progress: string[] = [];
     const lectureId = await organizeNotes(
@@ -83,7 +83,7 @@ describe("organizeNotes", () => {
     expect(progress).toEqual(["creating", "uploading", "uploaded", "uploading", "uploaded", "processing"]);
   });
 
-  it("on retry, reuses the class and skips photos that already uploaded", async () => {
+  it("on retry, reuses the notes and skips photos that already uploaded", async () => {
     const { calls, fetchImpl } = backend();
     await organizeNotes({ photos: [photo(1, { imageId: id(301) }), photo(2)], category: null, lectureId: id(1) }, () => {}, fetchImpl);
 

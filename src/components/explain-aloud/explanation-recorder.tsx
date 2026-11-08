@@ -140,7 +140,7 @@ export function ExplanationRecorder({
   async function startRecording() {
     setError(null);
     if (!lectureId) {
-      setError("Choose a class first.");
+      setError("Choose your notes first.");
       return;
     }
     if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
@@ -284,7 +284,7 @@ export function ExplanationRecorder({
 
       {!panelOpen && noClasses && !disabled ? (
         <p className="text-[12px] leading-[1.5] text-[#9496bf] sm:text-right">
-          Add a class first. Explanations are checked against that class’s notes.
+          Capture some notes first. Explanations are checked against them.
         </p>
       ) : null}
       {!panelOpen && error ? (
@@ -313,7 +313,7 @@ export function ExplanationRecorder({
 
           {phase === "setup" ? (
             <label className="flex flex-col gap-1.5 text-[12px] leading-[1.5] text-[#9496bf]">
-              Which class is this for?
+              Which notes is this for?
               <select
                 value={lectureId}
                 onChange={(e) => setLectureId(e.target.value)}

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { z } from "zod";
-import { NotesEditor } from "@/components/notes/notes-editor";
-import { orbitCardClass, OrbitPageHeading, OrbitPage, Pill } from "@/components/orbit/shell";
-import { loadLectureForEditor } from "@/lib/lectures/store";
-
+import { NotesActions } from "@/components/notes/notes-actions";
+import { NotesView } from "@/components/notes/notes-view";
+import { orbitCardClass, OrbitPage, OrbitPageHeading, Pill } from "@/components/orbit/shell";
+import { listCategories, loadLectureForPage } from "@/lib/lectures/store";
 
 export const metadata: Metadata = {
   title: "Your notes · Orbit Study",
@@ -27,17 +27,17 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
 
 const captureLink = (
   <Link href="/capture" className={`${linkButtonClass} self-start bg-[#ff5e7a] text-white hover:bg-[#ff7891]`}>
-    Capture a class
+    Capture a subject
   </Link>
 );
 
-/** Reads the session and the lecture at request time; streamed in behind the static shell. */
+/** Reads the session and the notes at request time; streamed in behind the static shell. */
 async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[id]">["params"] }) {
   const { id } = await params;
   if (!z.uuid().safeParse(id).success) notFound();
 
   const { userId } = await auth();
-  const lecture = userId ? await loadLectureForEditor(userId, id) : null;
+  const [lecture, subjects] = userId ? await Promise.all([loadLectureForPage(userId, id), listCategories(userId)]) : [null, []];
   if (userId && !lecture) notFound();
 
   let body: ReactNode;
@@ -61,17 +61,7 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
       </Message>
     );
   } else {
-    body = (
-      <NotesEditor
-        key={lecture.revision}
-        lectureId={lecture.id}
-        revision={lecture.revision}
-        initial={{
-          title: lecture.title,
-          sections: lecture.sections.map((s) => ({ id: s.id, heading: s.heading, blocks: s.blocks })),
-        }}
-      />
-    );
+    body = <NotesView sections={lecture.sections} />;
   }
 
   return (
@@ -79,11 +69,7 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
       <OrbitPageHeading
         eyebrow="02 / ORGANIZE NOTES"
         title={lecture?.status === "ready" ? lecture.title : "Your notes"}
-        subtitle={
-          lecture?.status === "ready"
-            ? "Check what the AI read, fix anything it got wrong, then turn it into a quiz."
-            : undefined
-        }
+        subtitle={lecture?.status === "ready" ? "Organized from your photos. Turn them into flashcards when you’re ready." : undefined}
         aside={
           lecture ? (
             <div className="flex flex-wrap items-center gap-2">
@@ -101,11 +87,19 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
         }
       />
       {body}
+      {lecture ? (
+        <NotesActions
+          lectureId={lecture.id}
+          subjects={subjects}
+          subjectId={lecture.categoryId}
+          canDelete={lecture.status !== "processing"}
+        />
+      ) : null}
     </>
   );
 }
 
-/** Step 02: review and edit the notes generated from a class's whiteboard photos. */
+/** Step 02: read the notes generated from whiteboard photos, move them to another subject, or delete them. */
 export default function LectureNotesPage({ params }: PageProps<"/lectures/[id]">) {
   return (
     <OrbitPage>

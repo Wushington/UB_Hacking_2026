@@ -1,23 +1,22 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { normalizeCategoryName } from "@/contracts/categories";
-import type { CreateLecture } from "@/contracts/lectures";
-import type { NoteSection, NotesUpdate } from "@/contracts/notes";
+import type { SubjectChoice } from "@/contracts/lectures";
+import type { NoteSection } from "@/contracts/notes";
 import { getDb, schema } from "@/db";
 import { deleteObject, headObject, objectKeyFor } from "@/lib/storage";
 import { checkUploadedImage } from "@/lib/uploads";
 import { ensureUser } from "@/lib/users";
-import { planNotesReplacement } from "./notes-update";
 
-const { categories, lectureImages, lectures, noteBlocks, noteSections } = schema;
+// In the UI a lecture is a set of "notes" and a category is its "subject".
+const { audioRecordings, categories, lectureImages, lectures, noteBlocks, noteSections } = schema;
 
 /** Title until the AI service suggests one from the photos. */
-export const UNTITLED_LECTURE = "Untitled class";
+export const UNTITLED_LECTURE = "Untitled notes";
 
 export type CategoryOption = { id: string; name: string };
 
-/** The user's categories, alphabetical, for the Capture page's class picker. */
+/** The user's subjects (categories), alphabetical, for the subject pickers. */
 export async function listCategories(userId: string): Promise<CategoryOption[]> {
   return getDb()
     .select({ id: categories.id, name: categories.name })
@@ -36,7 +35,7 @@ export type LectureSummary = {
   categoryName: string | null;
 };
 
-/** All of the user's lectures, most recently updated first, for the My classes page. */
+/** All of the user's notes, most recently updated first, for the My subjects page. */
 export async function listLectures(userId: string): Promise<LectureSummary[]> {
   return getDb()
     .select({
@@ -54,37 +53,65 @@ export async function listLectures(userId: string): Promise<LectureSummary[]> {
     .limit(500);
 }
 
-/** Creates a draft lecture. Returns null if a category id was given that the user doesn't own. */
-export async function createLecture(userId: string, category: NonNullable<CreateLecture["category"]> | null): Promise<string | null> {
-  const db = getDb();
-  await ensureUser(userId);
+type Db = ReturnType<typeof getDb>;
 
-  let categoryId: string | null = null;
-  if (category && "id" in category) {
+/**
+ * Resolves a subject choice to a category id: an owned id, a name (created if new, reusing an existing
+ * one with the same normalized name), or null for none. Returns undefined if the id isn't the user's.
+ */
+async function resolveSubject(db: Db, userId: string, subject: SubjectChoice): Promise<string | null | undefined> {
+  if (!subject) return null;
+  if ("id" in subject) {
     const [owned] = await db
       .select({ id: categories.id })
       .from(categories)
-      .where(and(eq(categories.id, category.id), eq(categories.userId, userId)));
-    if (!owned) return null;
-    categoryId = owned.id;
-  } else if (category) {
-    const normalizedName = normalizeCategoryName(category.name);
-    await db
-      .insert(categories)
-      .values({ userId, name: category.name.trim().replace(/\s+/g, " "), normalizedName })
-      .onConflictDoNothing({ target: [categories.userId, categories.normalizedName] });
-    const [row] = await db
-      .select({ id: categories.id })
-      .from(categories)
-      .where(and(eq(categories.userId, userId), eq(categories.normalizedName, normalizedName)));
-    categoryId = row.id;
+      .where(and(eq(categories.id, subject.id), eq(categories.userId, userId)));
+    return owned?.id;
   }
+  const normalizedName = normalizeCategoryName(subject.name);
+  await db
+    .insert(categories)
+    .values({ userId, name: subject.name.trim().replace(/\s+/g, " "), normalizedName })
+    .onConflictDoNothing({ target: [categories.userId, categories.normalizedName] });
+  const [row] = await db
+    .select({ id: categories.id })
+    .from(categories)
+    .where(and(eq(categories.userId, userId), eq(categories.normalizedName, normalizedName)));
+  return row.id;
+}
+
+/** Creates a draft lecture. Returns null if a subject id was given that the user doesn't own. */
+export async function createLecture(userId: string, subject: SubjectChoice): Promise<string | null> {
+  const db = getDb();
+  await ensureUser(userId);
+  const categoryId = await resolveSubject(db, userId, subject);
+  if (categoryId === undefined) return null;
 
   const [lecture] = await db
     .insert(lectures)
     .values({ userId, categoryId, title: UNTITLED_LECTURE })
     .returning({ id: lectures.id });
   return lecture.id;
+}
+
+/** Moves notes to another subject (or none). Returns the new subject's name, or an error. */
+export async function changeLectureSubject(
+  userId: string,
+  lectureId: string,
+  subject: SubjectChoice,
+): Promise<{ ok: true; subjectName: string | null } | { ok: false; status: 404; error: string }> {
+  const db = getDb();
+  const categoryId = await resolveSubject(db, userId, subject);
+  if (categoryId === undefined) return { ok: false, status: 404, error: "Subject not found" };
+  const [updated] = await db
+    .update(lectures)
+    .set({ categoryId })
+    .where(and(eq(lectures.id, lectureId), eq(lectures.userId, userId)))
+    .returning({ id: lectures.id });
+  if (!updated) return { ok: false, status: 404, error: "Notes not found" };
+  if (!categoryId) return { ok: true, subjectName: null };
+  const [row] = await db.select({ name: categories.name }).from(categories).where(eq(categories.id, categoryId));
+  return { ok: true, subjectName: row?.name ?? null };
 }
 
 export type FinalizeImageResult =
@@ -101,7 +128,7 @@ export async function finalizeLectureImage(userId: string, uploadId: string, lec
     .select({ status: lectures.status })
     .from(lectures)
     .where(and(eq(lectures.id, lectureId), eq(lectures.userId, userId)));
-  if (!lecture) return { ok: false, status: 404, error: "Class not found" };
+  if (!lecture) return { ok: false, status: 404, error: "Notes not found" };
 
   const objectKey = objectKeyFor(userId, "lecture_image", uploadId);
   const [existing] = await db
@@ -111,7 +138,7 @@ export async function finalizeLectureImage(userId: string, uploadId: string, lec
   if (existing) return { ok: true, id: existing.id, created: false };
 
   if (lecture.status === "processing" || lecture.status === "ready") {
-    return { ok: false, status: 409, error: "This class's notes were already generated" };
+    return { ok: false, status: 409, error: "These notes were already generated" };
   }
 
   let stored: Awaited<ReturnType<typeof headObject>>;
@@ -142,18 +169,18 @@ export async function finalizeLectureImage(userId: string, uploadId: string, lec
   return winner ? { ok: true, id: winner.id, created: false } : { ok: false, status: 409, error: "Upload could not be saved" };
 }
 
-export type LectureForEditor = {
+export type LectureForPage = {
   id: string;
   title: string;
   status: (typeof lectures.$inferSelect)["status"];
-  revision: number;
+  categoryId: string | null;
   categoryName: string | null;
   suggestedCategoryName: string | null;
   sections: NoteSection[];
 };
 
-/** A lecture the user owns with its notes, read in one consistent snapshot; null if not theirs. */
-export async function loadLectureForEditor(userId: string, lectureId: string): Promise<LectureForEditor | null> {
+/** Notes the user owns, with their sections, read in one consistent snapshot; null if not theirs. */
+export async function loadLectureForPage(userId: string, lectureId: string): Promise<LectureForPage | null> {
   return getDb().transaction(
     async (tx) => {
       const [lecture] = await tx
@@ -161,7 +188,7 @@ export async function loadLectureForEditor(userId: string, lectureId: string): P
           id: lectures.id,
           title: lectures.title,
           status: lectures.status,
-          revision: lectures.notesRevision,
+          categoryId: lectures.categoryId,
           categoryName: categories.name,
           suggestedCategoryName: lectures.suggestedCategoryName,
         })
@@ -199,82 +226,34 @@ export async function loadLectureForEditor(userId: string, lectureId: string): P
   );
 }
 
-export type SaveNotesResult =
-  | { ok: true; revision: number }
-  | { ok: false; status: 404 | 409; error: string; revision?: number };
+export type DeleteResult = { ok: true } | { ok: false; status: 404 | 409; error: string };
 
 /**
- * Replaces the lecture's notes with the editor's version, guarded by the revision the editor
- * started from: if someone saved in between, nothing changes and the current revision is returned.
+ * Deletes a set of notes and everything made from it: sections, photos, flashcard decks and study
+ * history, explanation attempts and their feedback, and weak concepts (database cascades, plus the
+ * explanation recordings, which only reference it). Bucket objects are removed best-effort afterwards.
+ *
+ * `unfinishedOnly` (used by the Capture page to discard an abandoned attempt) refuses notes that were
+ * generated, so a retry can never delete real notes. Notes being generated can't be deleted.
  */
-export async function saveLectureNotes(userId: string, lectureId: string, update: NotesUpdate): Promise<SaveNotesResult> {
-  return getDb().transaction(async (tx) => {
-    const owned = and(eq(lectures.id, lectureId), eq(lectures.userId, userId));
-    const [lecture] = await tx
-      .select({ status: lectures.status, revision: lectures.notesRevision })
-      .from(lectures)
-      .where(owned)
-      .for("update");
-    if (!lecture) return { ok: false, status: 404, error: "Class not found" };
-    if (lecture.status !== "ready") return { ok: false, status: 409, error: "These notes aren't ready to edit yet" };
-    if (lecture.revision !== update.baseRevision) {
-      return {
-        ok: false,
-        status: 409,
-        error: "These notes changed since you opened them. Reload to see the latest version.",
-        revision: lecture.revision,
-      };
-    }
-
-    const sectionIds = (await tx.select({ id: noteSections.id }).from(noteSections).where(eq(noteSections.lectureId, lectureId))).map(
-      (r) => r.id,
-    );
-    const blockIds = sectionIds.length
-      ? (await tx.select({ id: noteBlocks.id }).from(noteBlocks).where(inArray(noteBlocks.sectionId, sectionIds))).map((r) => r.id)
-      : [];
-    const imageIds = (
-      await tx.select({ id: lectureImages.id }).from(lectureImages).where(eq(lectureImages.lectureId, lectureId))
-    ).map((r) => r.id);
-
-    const plan = planNotesReplacement(lectureId, update.sections, { sectionIds, blockIds, imageIds }, randomUUID);
-
-    // Blocks cascade with their sections.
-    await tx.delete(noteSections).where(eq(noteSections.lectureId, lectureId));
-    if (plan.sections.length) await tx.insert(noteSections).values(plan.sections);
-    if (plan.blocks.length) await tx.insert(noteBlocks).values(plan.blocks);
-
-    const [saved] = await tx
-      .update(lectures)
-      .set({ notesRevision: sql`${lectures.notesRevision} + 1`, ...(update.title ? { title: update.title } : {}) })
-      .where(owned)
-      .returning({ revision: lectures.notesRevision });
-    return { ok: true, revision: saved.revision };
-  });
-}
-
-export type DiscardResult = { ok: true } | { ok: false; status: 404 | 409; error: string };
-
-/**
- * Deletes an unfinished lecture (draft or failed, so no notes are lost) and its photos, e.g. when the
- * student changes class or starts over on the Capture page. Photo rows cascade; bucket objects are
- * removed best-effort afterwards.
- */
-export async function discardUnfinishedLecture(userId: string, lectureId: string): Promise<DiscardResult> {
+export async function deleteLecture(userId: string, lectureId: string, { unfinishedOnly = false } = {}): Promise<DeleteResult> {
   const db = getDb();
   const owned = and(eq(lectures.id, lectureId), eq(lectures.userId, userId));
-  const keys = await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx): Promise<DeleteResult | { ok: true; keys: string[] }> => {
     const [lecture] = await tx.select({ status: lectures.status }).from(lectures).where(owned).for("update");
-    if (!lecture) return { status: 404 as const };
-    if (lecture.status !== "draft" && lecture.status !== "failed") return { status: 409 as const };
+    if (!lecture) return { ok: false, status: 404, error: "Notes not found" };
+    if (lecture.status === "processing") return { ok: false, status: 409, error: "These notes are still being organized. Try again in a minute." };
+    if (unfinishedOnly && lecture.status === "ready") return { ok: false, status: 409, error: "These notes were already generated" };
+
     const images = await tx.select({ key: lectureImages.objectKey }).from(lectureImages).where(eq(lectureImages.lectureId, lectureId));
+    const recordings = await tx
+      .delete(audioRecordings)
+      .where(and(eq(audioRecordings.lectureId, lectureId), eq(audioRecordings.userId, userId)))
+      .returning({ key: audioRecordings.objectKey });
     await tx.delete(lectures).where(owned);
-    return { keys: images.map((i) => i.key) };
+    return { ok: true, keys: [...images, ...recordings].map((r) => r.key) };
   });
-  if ("status" in keys) {
-    return keys.status === 404
-      ? { ok: false, status: 404, error: "Class not found" }
-      : { ok: false, status: 409, error: "Only unfinished classes can be discarded" };
-  }
-  await Promise.allSettled(keys.keys.map((key) => deleteObject(key)));
+  if (!result.ok || !("keys" in result)) return result;
+  await Promise.allSettled(result.keys.map((key) => deleteObject(key)));
   return { ok: true };
 }

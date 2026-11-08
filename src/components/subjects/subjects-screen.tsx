@@ -1,9 +1,9 @@
 import { ChevronRight, ImageIcon, Plus } from "lucide-react";
 import Link from "next/link";
 import { orbitCardClass, OrbitPageHeading, Pill, type PillTone } from "@/components/orbit/shell";
-import { groupByClass, type ClassLecture } from "./group-lectures";
+import { groupBySubject, type SubjectLecture } from "./group-lectures";
 
-const STATUS: Record<ClassLecture["status"], { label: string; tone: PillTone }> = {
+const STATUS: Record<SubjectLecture["status"], { label: string; tone: PillTone }> = {
   ready: { label: "Notes ready", tone: "success" },
   processing: { label: "Organizing…", tone: "neutral" },
   draft: { label: "No notes yet", tone: "neutral" },
@@ -19,20 +19,20 @@ function formatDate(date: Date) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-export function ClassesScreen({ lectures, signedIn }: { lectures: ClassLecture[]; signedIn: boolean }) {
-  const groups = groupByClass(lectures);
+export function SubjectsScreen({ lectures, signedIn }: { lectures: SubjectLecture[]; signedIn: boolean }) {
+  const groups = groupBySubject(lectures);
 
   return (
     <>
       <OrbitPageHeading
-        eyebrow="MY CLASSES"
+        eyebrow="MY SUBJECTS"
         title="Everything you’ve captured."
-        subtitle={signedIn ? "Open a set of notes to review and edit it, or turn it into flashcards." : "Sign in to see your classes."}
+        subtitle={signedIn ? "Open a set of notes to read it, change its subject, or turn it into flashcards." : "Sign in to see your subjects."}
         aside={
           signedIn ? (
             <Link href="/capture" className={captureButton}>
               <Plus aria-hidden className="size-[18px]" />
-              Capture a class
+              Capture a subject
             </Link>
           ) : null
         }
@@ -41,7 +41,7 @@ export function ClassesScreen({ lectures, signedIn }: { lectures: ClassLecture[]
       {signedIn && groups.length === 0 ? (
         <section className={orbitCardClass}>
           <p className="rounded-[12px] border border-dashed border-[#333564] px-5 py-8 text-center text-[14px] leading-[1.6] text-[#9496bf]">
-            No classes yet. Capture a whiteboard photo and your notes will show up here.
+            No subjects yet. Capture a whiteboard photo and your notes will show up here.
           </p>
         </section>
       ) : null}

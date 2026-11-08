@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (input instanceof Response) return input;
 
   if (input.purpose === "lecture_image") {
-    if (!input.lectureId) return jsonError(400, "lectureId: a photo must belong to a class");
+    if (!input.lectureId) return jsonError(400, "lectureId: a photo must belong to a set of notes");
     const result = await finalizeLectureImage(userId, input.uploadId, input.lectureId);
     if (!result.ok) return jsonError(result.status, result.error);
     return Response.json({ id: result.id } satisfies FinalizeUploadResponse, { status: result.created ? 201 : 200 });
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
   const recordingPurpose = recordingPurposeFor(input.purpose);
   if (!recordingPurpose) return jsonError(400, "Unsupported upload purpose");
   if (recordingPurpose === "explanation" && !input.lectureId) {
-    return jsonError(400, "lectureId: an explanation must belong to a class");
+    return jsonError(400, "lectureId: an explanation must belong to a set of notes");
   }
 
   const db = getDb();
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       .from(lectures)
       .where(and(eq(lectures.id, input.lectureId), eq(lectures.userId, userId)))
       .limit(1);
-    if (!lecture) return jsonError(404, "Class not found");
+    if (!lecture) return jsonError(404, "Notes not found");
   }
 
   // The key is rebuilt from the signed-in user, so nobody can finalize someone else's object.

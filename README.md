@@ -40,8 +40,8 @@ uvicorn main:app --reload --port 8000               # docs at http://localhost:8
 | `src/db/schema.ts` | Database tables. `src/db/index.ts` exports `getDb()` (server only). |
 | `src/lib/auth.ts` | `requireUserId()` for every server action / route handler. |
 | `src/lib/gemini.ts`, `src/lib/storage.ts` | Server-only Gemini client and private object storage (presigned URLs). |
-| `src/app/capture/`, `src/app/lectures/[id]/page.tsx` | Capture page (upload whiteboard photos → notes) and the editable notes page. Built on the dark shell in `src/components/orbit/`. |
-| `src/lib/lectures/` | Lecture creation, photo finalize, notes loading and revision-checked saves. |
+| `src/app/capture/`, `src/app/lectures/[id]/page.tsx`, `src/app/subjects/` | Capture (whiteboard photos → notes), the read-only notes page (Markdown + KaTeX; change subject or delete) and My subjects. In the UI a lecture is a set of "notes" and a category is its "subject". |
+| `src/lib/lectures/` | Creating notes, photo finalize, loading notes, changing subject and deleting. |
 | `src/ai-service/` | Python (FastAPI + OpenCV) service: whiteboard photos → notes. Only the Next.js server calls it, via `src/lib/ai/notes.ts`. All other Gemini features call `src/lib/gemini.ts`. |
 | `src/lib/env.ts` | Environment validation per integration. |
 | `src/components/ui/` | shadcn/ui primitives (`npx shadcn@latest add <name>`). `src/components/layout/` holds the app shell. |

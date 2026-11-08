@@ -1,8 +1,9 @@
 "use client";
 
-import { AudioLines, ChevronDown, CloudUpload, ImageIcon, Lightbulb, Plus, ScanLine, Sparkles, X } from "lucide-react";
+import { AudioLines, CloudUpload, ImageIcon, Lightbulb, Plus, ScanLine, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useLayoutEffect, useRef, useState, type DragEvent } from "react";
+import { useLayoutEffect, useRef, useState, type DragEvent } from "react";
+import { NEW_SUBJECT, NO_SUBJECT, SubjectPicker, subjectChoice, type SubjectOption } from "@/components/subjects/subject-picker";
 import { orbitCardClass, orbitEyebrowClass, OrbitPageHeading, Pill, type PillTone } from "@/components/orbit/shell";
 import { cn } from "@/lib/utils";
 import {
@@ -18,10 +19,6 @@ import {
   type QueuedPhoto,
 } from "./capture-api";
 
-export type CategoryOption = { id: string; name: string };
-
-const NEW_CATEGORY = "__new__";
-const NO_CATEGORY = "";
 
 const STATUS: Record<PhotoStatus, { label: string; tone: PillTone }> = {
   ready: { label: "Ready", tone: "success" },
@@ -42,37 +39,35 @@ type Phase =
   | { kind: "error"; message: string }
   | { kind: "done" };
 
-/** The class an earlier, unfinished attempt created, and the class choice it was created with. */
+/** The notes an earlier, unfinished attempt created, and the subject choice it was created with. */
 type Attempt = { lectureId: string; categoryKey: string };
 
 function progressMessage(p: OrganizeProgress): string | null {
-  if (p.stage === "creating") return "Setting up your class…";
+  if (p.stage === "creating") return "Setting up your notes…";
   if (p.stage === "uploading") return p.total > 1 ? `Uploading photo ${p.index + 1} of ${p.total}…` : "Uploading your photo…";
   if (p.stage === "processing") return "Organizing your notes… this can take up to a minute.";
   return null;
 }
 
 export function CaptureWorkspace({
-  categories,
+  subjects,
   signedIn,
   loading = false,
 }: {
-  categories: CategoryOption[];
+  subjects: SubjectOption[];
   signedIn: boolean;
   /** Placeholder while the session loads: everything disabled, no sign-in prompt. */
   loading?: boolean;
 }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
-  const selectId = useId();
-  const newNameId = useId();
   const [photos, setPhotos] = useState<QueuedPhoto[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const [categoryChoice, setCategoryChoice] = useState<string>(categories[0]?.id ?? NO_CATEGORY);
-  const [newCategory, setNewCategory] = useState("");
+  const [subjectValue, setSubjectValue] = useState<string>(subjects[0]?.id ?? NO_SUBJECT);
+  const [newSubject, setNewSubject] = useState("");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
-  // Set once a class is created, so a retry with the same class reuses it (and its uploaded photos).
+  // Set once the notes are created, so a retry with the same subject reuses them (and their uploaded photos).
   const [attempt, setAttempt] = useState<Attempt | null>(null);
   const succeeded = useRef(false);
 
@@ -92,8 +87,8 @@ export function CaptureWorkspace({
 
   const working = phase.kind === "working" || phase.kind === "done";
   const locked = working; // editable again as soon as an attempt fails
-  const categoryName =
-    categoryChoice === NEW_CATEGORY ? newCategory.trim() : categories.find((c) => c.id === categoryChoice)?.name ?? "";
+  const subjectName =
+    subjectValue === NEW_SUBJECT ? newSubject.trim() : subjects.find((c) => c.id === subjectValue)?.name ?? "";
 
   function addFiles(list: FileList | File[]) {
     const problems: string[] = [];
@@ -105,7 +100,7 @@ export function CaptureWorkspace({
         continue;
       }
       if (next.length >= MAX_PHOTOS) {
-        problems.push(`You can add up to ${MAX_PHOTOS} photos per class.`);
+        problems.push(`You can add up to ${MAX_PHOTOS} photos at a time.`);
         break;
       }
       next.push({ key: crypto.randomUUID(), file, mimeType: photoMimeType(file)!, status: "ready" });
@@ -132,20 +127,16 @@ export function CaptureWorkspace({
 
   async function organize() {
     if (!photos.length) return;
-    if (categoryChoice === NEW_CATEGORY && !newCategory.trim()) {
-      setPhase({ kind: "error", message: "Name your new class, or pick an existing one." });
+    const picked = subjectChoice(subjectValue, newSubject);
+    if ("error" in picked) {
+      setPhase({ kind: "error", message: picked.error });
       return;
     }
-    const category =
-      categoryChoice === NEW_CATEGORY
-        ? { name: newCategory.trim() }
-        : categoryChoice === NO_CATEGORY
-          ? null
-          : { id: categoryChoice };
+    const category = picked.choice;
     const categoryKey = JSON.stringify(category);
 
-    // A different class than the failed attempt used: discard that attempt and start fresh,
-    // re-uploading every photo to the new class.
+    // A different subject than the failed attempt used: discard that attempt and start fresh,
+    // re-uploading every photo.
     let lectureId = attempt?.lectureId ?? null;
     let queue = photos;
     if (attempt && attempt.categoryKey !== categoryKey) {
@@ -188,10 +179,10 @@ export function CaptureWorkspace({
   return (
     <>
       <OrbitPageHeading
-        eyebrow="01 / CAPTURE A CLASS"
+        eyebrow="01 / CAPTURE A SUBJECT"
         title="Good notes start here."
         subtitle="Bring a whiteboard photo or lecture audio. We’ll help you connect the dots."
-        aside={categoryName ? <Pill>{categoryName}</Pill> : null}
+        aside={subjectName ? <Pill>{subjectName}</Pill> : null}
       />
 
       <div className="grid w-full grid-cols-1 items-start gap-[22px] lg:grid-cols-[minmax(0,857fr)_minmax(0,448fr)] lg:gap-6">
@@ -312,44 +303,16 @@ export function CaptureWorkspace({
           <div className="h-px w-full bg-[#333564]" />
 
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex w-full min-w-0 flex-col gap-2 sm:max-w-[310px]">
-              <label htmlFor={selectId} className="text-[11px] tracking-[0.5px] text-[#9496bf] uppercase">
-                Assign to class
-              </label>
-              <div className="relative">
-                <select
-                  id={selectId}
-                  value={categoryChoice}
-                  disabled={locked || !signedIn}
-                  onChange={(e) => setCategoryChoice(e.target.value)}
-                  className="h-[46px] w-full appearance-none rounded-[10px] bg-[#1e1f45] pr-10 pl-3.5 text-[14px] text-white outline-none focus-visible:ring-2 focus-visible:ring-[#ff5e7a] disabled:opacity-60"
-                >
-                  {categories.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                  <option value={NO_CATEGORY}>No class yet</option>
-                  <option value={NEW_CATEGORY}>+ New class…</option>
-                </select>
-                <ChevronDown aria-hidden className="pointer-events-none absolute top-1/2 right-3.5 size-4 -translate-y-1/2 text-[#c1bedf]" />
-              </div>
-              {categoryChoice === NEW_CATEGORY ? (
-                <>
-                  <label htmlFor={newNameId} className="sr-only">
-                    New class name
-                  </label>
-                  <input
-                    id={newNameId}
-                    value={newCategory}
-                    maxLength={60}
-                    disabled={locked}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    placeholder="e.g. Cell Biology · BIO 201"
-                    className="h-[46px] w-full rounded-[10px] bg-[#1e1f45] px-3.5 text-[14px] text-white outline-none placeholder:text-[#6f71a0] focus-visible:ring-2 focus-visible:ring-[#ff5e7a]"
-                  />
-                </>
-              ) : null}
+            <div className="w-full sm:max-w-[310px]">
+              <SubjectPicker
+                label="Assign to subject"
+                subjects={subjects}
+                value={subjectValue}
+                onChange={setSubjectValue}
+                newName={newSubject}
+                onNewNameChange={setNewSubject}
+                disabled={locked || !signedIn}
+              />
             </div>
 
             <div className="flex flex-col items-stretch gap-2 sm:items-end">

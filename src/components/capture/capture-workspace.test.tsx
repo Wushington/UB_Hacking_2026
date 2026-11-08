@@ -52,19 +52,19 @@ beforeEach(() => push.mockClear());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("CaptureWorkspace", () => {
-  it("keeps the class picker, new-class field and photos editable after a failed attempt", async () => {
+  it("keeps the subject picker, new-subject field and photos editable after a failed attempt", async () => {
     let ok = false;
     backend(() => ok);
     const user = userEvent.setup();
-    render(<CaptureWorkspace categories={categories} signedIn />);
+    render(<CaptureWorkspace subjects={categories} signedIn />);
 
     await addPhotos(user, "board1.jpg");
     await user.click(screen.getByRole("button", { name: /organize notes/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't generate notes right now");
 
-    const picker = screen.getByLabelText(/assign to class/i);
+    const picker = screen.getByLabelText(/assign to subject/i);
     expect(picker).toBeEnabled();
-    await user.selectOptions(picker, "+ New class…");
+    await user.selectOptions(picker, "+ New subject…");
     const name = screen.getByPlaceholderText(/cell biology/i);
     expect(name).toBeEnabled();
     await user.type(name, "Organic Chemistry");
@@ -76,11 +76,11 @@ describe("CaptureWorkspace", () => {
     ok = true;
   });
 
-  it("retries with the same class by reusing the attempt and only uploading new photos", async () => {
+  it("retries with the same subject by reusing the attempt and only uploading new photos", async () => {
     let ok = false;
     const calls = backend(() => ok);
     const user = userEvent.setup();
-    render(<CaptureWorkspace categories={categories} signedIn />);
+    render(<CaptureWorkspace subjects={categories} signedIn />);
 
     await addPhotos(user, "board1.jpg");
     await user.click(screen.getByRole("button", { name: /organize notes/i }));
@@ -97,40 +97,40 @@ describe("CaptureWorkspace", () => {
     expect(calls.at(-1)?.body).toEqual({ imageIds: [id(201), id(202)] });
   });
 
-  it("switching class after a failure discards the old attempt and starts fresh", async () => {
+  it("switching subject after a failure discards the old attempt and starts fresh", async () => {
     let ok = false;
     const calls = backend(() => ok);
     const user = userEvent.setup();
-    render(<CaptureWorkspace categories={categories} signedIn />);
+    render(<CaptureWorkspace subjects={categories} signedIn />);
 
     await addPhotos(user, "board1.jpg");
     await user.click(screen.getByRole("button", { name: /organize notes/i }));
     await screen.findByRole("alert");
 
-    await user.selectOptions(screen.getByLabelText(/assign to class/i), "Calculus II");
+    await user.selectOptions(screen.getByLabelText(/assign to subject/i), "Calculus II");
     ok = true;
     await user.click(screen.getByRole("button", { name: /try again|organize notes/i }));
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/lectures/${id(2)}`));
 
-    expect(calls).toContainEqual({ method: "DELETE", url: `/api/lectures/${id(1)}`, body: undefined });
+    expect(calls).toContainEqual({ method: "DELETE", url: `/api/lectures/${id(1)}?unfinished=1`, body: undefined });
     expect(calls.filter((c) => c.url === "/api/lectures").map((c) => c.body)).toEqual([
       { category: { id: id(901) } },
       { category: { id: id(902) } },
     ]);
-    expect(calls.filter((c) => c.method === "PUT")).toHaveLength(2); // re-uploaded to the new class
+    expect(calls.filter((c) => c.method === "PUT")).toHaveLength(2); // re-uploaded for the new subject
   });
 
   it("start over discards the attempt and clears the photos", async () => {
     const calls = backend(() => false);
     const user = userEvent.setup();
-    render(<CaptureWorkspace categories={categories} signedIn />);
+    render(<CaptureWorkspace subjects={categories} signedIn />);
 
     await addPhotos(user, "board1.jpg");
     await user.click(screen.getByRole("button", { name: /organize notes/i }));
     await screen.findByRole("alert");
     await user.click(screen.getByRole("button", { name: /start over/i }));
 
-    expect(calls).toContainEqual({ method: "DELETE", url: `/api/lectures/${id(1)}`, body: undefined });
+    expect(calls).toContainEqual({ method: "DELETE", url: `/api/lectures/${id(1)}?unfinished=1`, body: undefined });
     expect(screen.queryByText("board1.jpg")).toBeNull();
     expect(screen.getByRole("button", { name: /organize notes/i })).toBeDisabled();
   });

@@ -86,7 +86,7 @@ describe("ExplainAloudScreen", () => {
     );
     expect(screen.getByText("Analyzing…")).toBeInTheDocument();
     expect(screen.getByRole("status", { name: "Transcribing your explanation…" })).toBeInTheDocument();
-    expect(screen.getByText(/comparing your explanation with your class notes/i)).toBeInTheDocument();
+    expect(screen.getByText(/comparing your explanation with your notes/i)).toBeInTheDocument();
     expect(container.querySelectorAll("[data-skeleton]")).toHaveLength(3);
     // None of the static "will show up here" placeholders while work is in progress.
     expect(container.textContent).not.toMatch(/will (show up|appear) here/);
@@ -107,14 +107,14 @@ describe("ExplainAloudScreen", () => {
     expect(screen.queryByText(/comparing your explanation/i)).not.toBeInTheDocument();
   });
 
-  it("enables recording another attempt when the user has a class", () => {
+  it("enables recording another attempt when the user has notes", () => {
     render(<ExplainAloudScreen view={readyView} lectures={[{ id: readyView.lectureId!, title: "Cellular respiration" }]} />);
     expect(screen.getByRole("button", { name: /record another attempt/i })).toBeEnabled();
   });
 
-  it("disables recording until the user has a class", () => {
+  it("disables recording until the user has notes", () => {
     render(<ExplainAloudScreen view={emptyView("empty")} lectures={[]} />);
     expect(screen.getByRole("button", { name: /record an explanation/i })).toBeDisabled();
-    expect(screen.getByText(/add a class first/i)).toBeInTheDocument();
+    expect(screen.getByText(/capture some notes first/i)).toBeInTheDocument();
   });
 });
