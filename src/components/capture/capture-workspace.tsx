@@ -2,11 +2,12 @@
 
 import { AudioLines, ChevronDown, CloudUpload, ImageIcon, Lightbulb, Plus, ScanLine, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useId, useRef, useState, type DragEvent } from "react";
+import { useId, useLayoutEffect, useRef, useState, type DragEvent } from "react";
 import { orbitCardClass, orbitEyebrowClass, OrbitPageHeading, Pill, type PillTone } from "@/components/orbit/shell";
 import { cn } from "@/lib/utils";
 import {
   CaptureError,
+  discardLecture,
   formatBytes,
   MAX_PHOTOS,
   organizeNotes,
@@ -35,7 +36,14 @@ const AI_STEPS = [
   { title: "Make it yours", body: "Review, edit and generate a quiz when ready." },
 ];
 
-type Phase = { kind: "idle" } | { kind: "working"; message: string } | { kind: "error"; message: string };
+type Phase =
+  | { kind: "idle" }
+  | { kind: "working"; message: string }
+  | { kind: "error"; message: string }
+  | { kind: "done" };
+
+/** The class an earlier, unfinished attempt created, and the class choice it was created with. */
+type Attempt = { lectureId: string; categoryKey: string };
 
 function progressMessage(p: OrganizeProgress): string | null {
   if (p.stage === "creating") return "Setting up your class…";
@@ -64,11 +72,26 @@ export function CaptureWorkspace({
   const [categoryChoice, setCategoryChoice] = useState<string>(categories[0]?.id ?? NO_CATEGORY);
   const [newCategory, setNewCategory] = useState("");
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
-  // Set once the class is created, so a retry reuses it (and its uploaded photos).
-  const [lectureId, setLectureId] = useState<string | null>(null);
+  // Set once a class is created, so a retry with the same class reuses it (and its uploaded photos).
+  const [attempt, setAttempt] = useState<Attempt | null>(null);
+  const succeeded = useRef(false);
 
-  const working = phase.kind === "working";
-  const locked = working || lectureId !== null; // photos and class are fixed once the class exists
+  // Next keeps this page's state when you navigate away and back (React <Activity>). After a
+  // successful upload, reset as the page is hidden so coming back shows a fresh form. Unfinished
+  // work (photos added, a failed attempt) is kept. See node_modules/next/dist/docs: preserving-ui-state.
+  useLayoutEffect(() => {
+    return () => {
+      if (!succeeded.current) return;
+      succeeded.current = false;
+      setPhotos([]);
+      setAttempt(null);
+      setNotice(null);
+      setPhase({ kind: "idle" });
+    };
+  }, []);
+
+  const working = phase.kind === "working" || phase.kind === "done";
+  const locked = working; // editable again as soon as an attempt fails
   const categoryName =
     categoryChoice === NEW_CATEGORY ? newCategory.trim() : categories.find((c) => c.id === categoryChoice)?.name ?? "";
 
@@ -89,6 +112,11 @@ export function CaptureWorkspace({
     }
     setPhotos(next);
     setNotice(problems.length ? [...new Set(problems)].join(" ") : null);
+    if (phase.kind === "error") setPhase({ kind: "idle" });
+  }
+
+  function removePhoto(key: string) {
+    setPhotos((all) => all.filter((p) => p.key !== key));
     if (phase.kind === "error") setPhase({ kind: "idle" });
   }
 
@@ -114,18 +142,32 @@ export function CaptureWorkspace({
         : categoryChoice === NO_CATEGORY
           ? null
           : { id: categoryChoice };
+    const categoryKey = JSON.stringify(category);
+
+    // A different class than the failed attempt used: discard that attempt and start fresh,
+    // re-uploading every photo to the new class.
+    let lectureId = attempt?.lectureId ?? null;
+    let queue = photos;
+    if (attempt && attempt.categoryKey !== categoryKey) {
+      void discardLecture(attempt.lectureId);
+      setAttempt(null);
+      lectureId = null;
+      queue = photos.map((p) => ({ ...p, imageId: undefined, status: "ready" }));
+      setPhotos(queue);
+    }
 
     setPhase({ kind: "working", message: "Getting started…" });
     try {
-      const id = await organizeNotes({ photos, category, lectureId }, (p) => {
-        if (p.lectureId) setLectureId(p.lectureId);
+      const id = await organizeNotes({ photos: queue, category, lectureId }, (p) => {
+        if (p.lectureId) setAttempt({ lectureId: p.lectureId, categoryKey });
         if (p.stage === "uploading") updatePhoto(p.key, { status: "uploading" });
         if (p.stage === "uploaded") updatePhoto(p.key, { status: "uploaded", imageId: p.imageId });
         if (p.stage === "upload-failed") updatePhoto(p.key, { status: "failed" });
         const message = progressMessage(p);
         if (message) setPhase({ kind: "working", message });
       });
-      setPhase({ kind: "working", message: "Done! Opening your notes…" });
+      succeeded.current = true;
+      setPhase({ kind: "done" });
       router.push(`/lectures/${id}`);
     } catch (error) {
       setPhase({
@@ -136,8 +178,9 @@ export function CaptureWorkspace({
   }
 
   function startOver() {
+    if (attempt) void discardLecture(attempt.lectureId);
     setPhotos([]);
-    setLectureId(null);
+    setAttempt(null);
     setNotice(null);
     setPhase({ kind: "idle" });
   }
@@ -255,7 +298,7 @@ export function CaptureWorkspace({
                       type="button"
                       aria-label={`Remove ${photo.file.name}`}
                       disabled={locked}
-                      onClick={() => setPhotos((all) => all.filter((p) => p.key !== photo.key))}
+                      onClick={() => removePhoto(photo.key)}
                       className="flex size-7 shrink-0 items-center justify-center rounded-full text-[#c1bedf] transition-colors hover:bg-[#1e1f45] hover:text-white disabled:invisible"
                     >
                       <X aria-hidden className="size-4" />
@@ -317,7 +360,7 @@ export function CaptureWorkspace({
                 className="inline-flex h-[46px] items-center justify-center gap-2 rounded-[10px] bg-[#ff5e7a] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#ff7891] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#ff5e7a]"
               >
                 <Sparkles aria-hidden className="size-[18px]" />
-                {phase.kind === "error" && lectureId ? "Try again" : "Organize notes"}
+                {attempt ? "Try again" : "Organize notes"}
               </button>
             </div>
           </div>
@@ -327,12 +370,14 @@ export function CaptureWorkspace({
               <p className="text-[12px] text-[#9496bf]">Sign in (top right) to organize your notes.</p>
             ) : phase.kind === "working" ? (
               <p className="text-[13px] text-[#c1bedf]">{phase.message}</p>
+            ) : phase.kind === "done" ? (
+              <p className="text-[13px] text-[#c1bedf]">Done! Opening your notes…</p>
             ) : phase.kind === "error" ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                 <p role="alert" className="text-[13px] text-[#ff5e7a]">
                   {phase.message}
                 </p>
-                {lectureId ? (
+                {attempt ? (
                   <button type="button" onClick={startOver} className="text-[12px] text-[#9496bf] underline-offset-2 hover:text-white hover:underline">
                     Start over with different photos
                   </button>

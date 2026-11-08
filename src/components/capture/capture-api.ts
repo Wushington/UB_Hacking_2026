@@ -71,6 +71,15 @@ export async function createLecture(category: CreateLecture["category"], fetchIm
   return createLectureResponseSchema.parse(await res.json()).id;
 }
 
+/** Best-effort cleanup of an abandoned attempt (draft/failed class). Never throws. */
+export async function discardLecture(lectureId: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+  try {
+    await fetchImpl(`/api/lectures/${lectureId}`, { method: "DELETE" });
+  } catch {
+    // Leaving an unfinished class behind is harmless; it shows as "Needs another try" in My classes.
+  }
+}
+
 /** prepare → PUT straight to the private bucket → finalize. Returns the lecture_images id. */
 export async function uploadPhoto(
   input: { file: Blob; mimeType: PhotoMimeType; lectureId: string },

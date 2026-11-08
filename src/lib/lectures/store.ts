@@ -251,3 +251,30 @@ export async function saveLectureNotes(userId: string, lectureId: string, update
     return { ok: true, revision: saved.revision };
   });
 }
+
+export type DiscardResult = { ok: true } | { ok: false; status: 404 | 409; error: string };
+
+/**
+ * Deletes an unfinished lecture (draft or failed, so no notes are lost) and its photos, e.g. when the
+ * student changes class or starts over on the Capture page. Photo rows cascade; bucket objects are
+ * removed best-effort afterwards.
+ */
+export async function discardUnfinishedLecture(userId: string, lectureId: string): Promise<DiscardResult> {
+  const db = getDb();
+  const owned = and(eq(lectures.id, lectureId), eq(lectures.userId, userId));
+  const keys = await db.transaction(async (tx) => {
+    const [lecture] = await tx.select({ status: lectures.status }).from(lectures).where(owned).for("update");
+    if (!lecture) return { status: 404 as const };
+    if (lecture.status !== "draft" && lecture.status !== "failed") return { status: 409 as const };
+    const images = await tx.select({ key: lectureImages.objectKey }).from(lectureImages).where(eq(lectureImages.lectureId, lectureId));
+    await tx.delete(lectures).where(owned);
+    return { keys: images.map((i) => i.key) };
+  });
+  if ("status" in keys) {
+    return keys.status === 404
+      ? { ok: false, status: 404, error: "Class not found" }
+      : { ok: false, status: 409, error: "Only unfinished classes can be discarded" };
+  }
+  await Promise.allSettled(keys.keys.map((key) => deleteObject(key)));
+  return { ok: true };
+}
