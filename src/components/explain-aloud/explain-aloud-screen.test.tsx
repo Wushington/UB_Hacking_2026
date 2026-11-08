@@ -65,7 +65,8 @@ describe("ExplainAloudScreen", () => {
 
   it.each(["empty", "signed-out", "loading"] as const)("shows placeholders and no Figma filler when %s", (state) => {
     const { container } = render(<ExplainAloudScreen view={emptyView(state)} />);
-    expect(container.querySelectorAll("[data-placeholder]").length).toBeGreaterThanOrEqual(4);
+    // Empty/signed-out sections show static placeholders; while loading they show spinners/skeletons.
+    expect(container.querySelectorAll("[data-placeholder], [data-analyzing], [data-skeleton]").length).toBeGreaterThanOrEqual(4);
     for (const filler of FIGMA_FILLER) expect(container.textContent).not.toMatch(filler);
     expect(screen.queryByRole("button", { name: /listen/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Recorded/)).not.toBeInTheDocument();
@@ -77,16 +78,33 @@ describe("ExplainAloudScreen", () => {
     expect(screen.getByRole("button", { name: /record an explanation/i })).toBeDisabled();
   });
 
-  it("shows the processing state", () => {
-    render(
+  it("shows spinners and skeletons while the attempt is analyzed", () => {
+    const { container } = render(
       <ExplainAloudScreen
         view={{ ...readyView, state: "processing", transcript: null, feedback: null, recordedLabel: null }}
       />,
     );
     expect(screen.getByText("Analyzing…")).toBeInTheDocument();
-    expect(
-      screen.getByText("Your transcript will appear here after your explanation is processed."),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Transcribing your explanation…" })).toBeInTheDocument();
+    expect(screen.getByText(/comparing your explanation with your class notes/i)).toBeInTheDocument();
+    expect(container.querySelectorAll("[data-skeleton]")).toHaveLength(3);
+    // None of the static "will show up here" placeholders while work is in progress.
+    expect(container.textContent).not.toMatch(/will (show up|appear) here/);
+    // The attempt itself is already shown.
+    expect(screen.getByRole("heading", { name: "Cellular respiration" })).toBeInTheDocument();
+  });
+
+  it("shows loading spinners in the Suspense fallback", () => {
+    render(<ExplainAloudScreen view={emptyView("loading")} />);
+    expect(screen.getByRole("status", { name: "Loading your explanation…" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Loading…" })).toBeInTheDocument();
+    expect(screen.getByText("Loading your feedback…")).toBeInTheDocument();
+  });
+
+  it("drops the analyzing indicators once feedback is ready", () => {
+    const { container } = render(<ExplainAloudScreen view={readyView} />);
+    expect(container.querySelectorAll("[data-analyzing], [data-skeleton]")).toHaveLength(0);
+    expect(screen.queryByText(/comparing your explanation/i)).not.toBeInTheDocument();
   });
 
   it("enables recording another attempt when the user has a class", () => {

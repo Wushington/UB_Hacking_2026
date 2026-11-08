@@ -88,6 +88,24 @@ describe("ExplanationRecorder", () => {
     expect(arg.mimeType).toBe("audio/webm");
     expect(arg.lectureId).toBe(LECTURES[0].id);
     expect(arg.blob.size).toBeGreaterThan(0);
+    // Navigation (mocked) settles immediately: the "opening" panel closes and recording is available again.
+    expect(await screen.findByRole("button", { name: /record an explanation/i })).toBeEnabled();
+    expect(screen.queryByText(/opening your attempt/i)).not.toBeInTheDocument();
+  });
+
+  it("shows 'Opening your attempt…' until the new attempt has loaded", async () => {
+    // A navigation that never settles keeps the transition pending.
+    push.mockImplementation(() => {
+      throw new Promise(() => {});
+    });
+    uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
+    renderRecorder();
+    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
+    await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Opening your attempt…");
+    expect(screen.getByRole("heading", { name: "Uploaded" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /record an explanation/i })).not.toBeInTheDocument();
   });
 
   it("asks which class when there are several and no current one", async () => {
