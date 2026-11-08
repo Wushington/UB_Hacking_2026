@@ -67,6 +67,26 @@ describe("custom Clerk authentication", () => {
     await userEvent.click(screen.getByRole("button", { name: /continue with github/i }));
     expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_github", redirectCallbackUrl: "/sso-callback", redirectUrl: "/home" });
   });
+  it.each(["needs_second_factor", "needs_client_trust", "needs_first_factor"])("continues Google verification when Clerk returns %s without redirecting", async (status) => {
+    mocks.state.status = status;
+    render(<SignInForm />);
+    await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/auth"));
+    expect(mocks.finalize).not.toHaveBeenCalled();
+  });
+  it("finalizes Google sign-in when Clerk completes without redirecting", async () => {
+    render(<SignInForm />);
+    await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+    await waitFor(() => expect(mocks.finalize).toHaveBeenCalledOnce());
+  });
+  it("shows a Google error beside the social buttons and allows retry", async () => {
+    mocks.sso.mockResolvedValueOnce({ error: { longMessage: "Google sign-in is unavailable. Please try again." } });
+    render(<SignInForm />);
+    await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Google sign-in is unavailable");
+    expect(screen.getByRole("button", { name: /continue with google/i })).toBeEnabled();
+    expect(mocks.finalize).not.toHaveBeenCalled();
+  });
   it("recovers a password through email code verification", async () => {
     render(<SignInForm recovery />); const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email address"), "student@example.com");
