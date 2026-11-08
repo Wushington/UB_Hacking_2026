@@ -63,3 +63,41 @@
   .orbit-reassurance { font-size: 11px; }
 }
 @media (min-width: 601px) and (max-height: 900px) { .orbit-content { min-height: auto; padding-top: 24px; padding-bottom: 40px; } }
+
+/* Sign-up branding, scoped to preserve the other auth pages. */
+.orbit-auth-salmon {
+  --orbit-text: #fff5f4;
+  --orbit-muted: #cdb8bb;
+  --orbit-accent: #ff5e7a;
+  --orbit-border: rgba(255, 166, 179, .22);
+
+}
+.orbit-auth-salmon .orbit-brand > img { width: 48px; height: 28px; object-fit: contain; }
+.orbit-auth-salmon .orbit-footer { color: #a48a92; }
+.orbit-launch { position: relative; width: min(460px, 100%); text-align: center; padding: 180px 24px 32px; }
+.orbit-launch-ship { position: absolute; top: 70px; left: calc(50% - 44px); color: #ff5e7a; filter: drop-shadow(0 0 24px rgba(255,94,122,.55)); animation: orbit-liftoff 1.3s cubic-bezier(.45,0,.8,.4) both; }
+.orbit-launch-ship > svg { transform: rotate(-45deg); fill: #21141c; }
+.orbit-launch-flame { position: absolute; top: 73px; left: 35px; width: 18px; height: 64px; background: linear-gradient(#fff4d6, #ff9b70 35%, #ff5e7a 65%, transparent); border-radius: 40% 40% 70% 70%; filter: blur(2px); transform-origin: top; animation: orbit-flame .13s ease-in-out infinite alternate; }
+.orbit-launch-caption h1 { font-size: 26px; font-weight: 600; margin-bottom: 12px; }
+.orbit-launch-caption p { color: var(--orbit-muted); margin-bottom: 24px; }
+.orbit-launch-caption { animation: orbit-launch-reveal .3s ease-out both; }
+@keyframes orbit-liftoff { 0% { transform: translateY(16px) scale(.85); opacity: 0; } 18% { transform: translateY(0) scale(1); opacity: 1; } 45% { transform: translateY(-8px); opacity: 1; } 100% { transform: translateY(-65vh) scale(.65); opacity: 0; } }
+@keyframes orbit-flame { from { transform: scaleY(.7); } to { transform: scaleY(1.15); } }
+@keyframes orbit-launch-reveal { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .orbit-launch-ship { animation: orbit-launch-reveal .2s ease-out both; }
+  .orbit-launch-flame { display: none; }
+  .orbit-launch-caption { animation: none; }
+}
+/* Let the card dissolve before the rocket accelerates into the dashboard. */
+.orbit-launch-smooth::before { content: ""; position: absolute; inset: 0; border: 1px solid rgba(255,183,192,.18); border-radius: 24px; background: rgba(33,20,28,.8); box-shadow: 0 20px 60px rgba(0,0,0,.2); pointer-events: none; animation: orbit-card-depart .7s ease-in .15s both; }
+.orbit-launch-smooth .orbit-launch-ship { z-index: 1; animation-duration: 1.55s; animation-timing-function: cubic-bezier(.5,0,.75,.3); }
+.orbit-launch-smooth .orbit-launch-caption { position: relative; animation: orbit-caption-depart 1.2s ease-in both; }
+.orbit-launch-smooth > .orbit-text-link { position: relative; }
+@keyframes orbit-card-depart { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.96); } }
+@keyframes orbit-caption-depart { 0%, 45% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) {
+  .orbit-launch-smooth::before { animation: none; opacity: 0; }
+  .orbit-launch-smooth .orbit-launch-ship { animation: orbit-launch-reveal .2s ease-out both; }
+  .orbit-launch-smooth .orbit-launch-caption { animation: none; }
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { z } from "zod";
+import { ExportNotesPdf } from "@/components/notes/export-notes-pdf";
 import { NotesActions } from "@/components/notes/notes-actions";
 import { NotesView } from "@/components/notes/notes-view";
 import { NotesWithPhotos } from "@/components/notes/photo-viewer";
@@ -84,6 +85,7 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
         aside={
           lecture ? (
             <div className="flex flex-wrap items-center gap-2">
+              {lecture.status === "ready" && <ExportNotesPdf title={lecture.title} subject={lecture.categoryName} />}
               {lecture.categoryName ? <Pill>{lecture.categoryName}</Pill> : null}
               {lecture.status === "ready" ? (
                 <Link
