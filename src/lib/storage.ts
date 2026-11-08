@@ -84,3 +84,9 @@ export async function getObjectBytes(key: string): Promise<Uint8Array> {
   if (!res.Body) throw new Error(`Empty object: ${key}`);
   return res.Body.transformToByteArray();
 }
+
+/** Server-side write (e.g. a generated JPEG preview next to the original upload). */
+export async function putObject(key: string, body: Uint8Array, contentType: string): Promise<void> {
+  const { client, bucket } = storage();
+  await client.send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
+}

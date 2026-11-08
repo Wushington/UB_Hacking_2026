@@ -6,6 +6,7 @@ import remarkMath from "remark-math";
 import type { NoteSection } from "@/contracts/notes";
 import { orbitCardClass, orbitEyebrowClass } from "@/components/orbit/shell";
 import { cn } from "@/lib/utils";
+import { SourceTags } from "./photo-viewer";
 
 type Block = NoteSection["blocks"][number];
 
@@ -14,6 +15,24 @@ type Block = NoteSection["blocks"][number];
  * math; equation blocks are LaTeX (no delimiters), rendered as display math with KaTeX.
  * react-markdown ignores raw HTML, and KaTeX runs with `trust: false`, so model output can't inject markup.
  */
+
+/**
+ * Which blocks get a "Photo N" tag: the first block of each run that came from the same photos, so a
+ * section read from one photo isn't tagged on every line.
+ */
+export function blocksToTag(blocks: Block[]): Set<string> {
+  const tagged = new Set<string>();
+  let previous = "";
+  for (const block of blocks) {
+    const key = block.sourceRefs.map((r) => r.imageId).join(",");
+    if (key && key !== previous) tagged.add(block.id);
+    previous = key;
+  }
+  return tagged;
+}
+
+const tagsFor = (block: Block, tagged: Set<string>) =>
+  tagged.has(block.id) ? <SourceTags imageIds={block.sourceRefs.map((r) => r.imageId)} /> : null;
 
 /** Groups consecutive bullet blocks into one list; every other block stands alone. */
 export function groupBlocks(blocks: Block[]): ({ kind: "bullets"; items: Block[] } | { kind: "single"; block: Block })[] {
@@ -99,31 +118,38 @@ export function NotesView({ sections }: { sections: NoteSection[] }) {
   }
   return (
     <div className="flex w-full flex-col gap-[22px]">
-      {sections.map((section, i) => (
-        <section key={section.id} aria-labelledby={`section-${section.id}`} className={orbitCardClass}>
-          <div className="flex flex-col gap-1.5">
-            <p className={orbitEyebrowClass}>{String(i + 1).padStart(2, "0")}</p>
-            <h2 id={`section-${section.id}`} className="text-[21px] leading-[1.3] font-medium tracking-[-0.4px] sm:text-[23px]">
-              {section.heading}
-            </h2>
-          </div>
-          <div className="flex flex-col gap-4">
-            {groupBlocks(section.blocks).map((group) =>
-              group.kind === "bullets" ? (
-                <ul key={group.items[0].id} className="flex list-disc flex-col gap-1.5 pl-5 marker:text-[#ff5e7a]">
-                  {group.items.map((item) => (
-                    <li key={item.id}>
-                      <Text>{item.text}</Text>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <BlockView key={group.block.id} block={group.block} />
-              ),
-            )}
-          </div>
-        </section>
-      ))}
+      {sections.map((section, i) => {
+        const tagged = blocksToTag(section.blocks);
+        return (
+          <section key={section.id} aria-labelledby={`section-${section.id}`} className={orbitCardClass}>
+            <div className="flex flex-col gap-1.5">
+              <p className={orbitEyebrowClass}>{String(i + 1).padStart(2, "0")}</p>
+              <h2 id={`section-${section.id}`} className="text-[21px] leading-[1.3] font-medium tracking-[-0.4px] sm:text-[23px]">
+                {section.heading}
+              </h2>
+            </div>
+            <div className="flex flex-col gap-4">
+              {groupBlocks(section.blocks).map((group) =>
+                group.kind === "bullets" ? (
+                  <ul key={group.items[0].id} className="flex list-disc flex-col gap-1.5 pl-5 marker:text-[#ff5e7a]">
+                    {group.items.map((item) => (
+                      <li key={item.id}>
+                        <Text>{item.text}</Text>
+                        {tagsFor(item, tagged)}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div key={group.block.id}>
+                    <BlockView block={group.block} />
+                    {tagsFor(group.block, tagged)}
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+        );
+      })}
     </div>
   );
 }

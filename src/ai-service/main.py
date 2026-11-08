@@ -1,4 +1,4 @@
-"""AI service: whiteboard/notebook photos -> organized notes.
+"""AI service: whiteboard/notebook photos -> organized notes (and display previews of them).
 
 Only the Next.js server calls this (src/lib/ai/notes.ts); it is never exposed
 to browsers. All other Gemini features (flashcards, audio, explanations) live
@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parents[2] / ".env.local")
 load_dotenv()
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile  # noqa: E402
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile  # noqa: E402
 
 from gemini_client import AIServiceError, generate_notes  # noqa: E402
 from preprocess import preprocess  # noqa: E402
@@ -84,6 +84,25 @@ async def process_notes(
         return await generate_notes(jpegs, ids)
     except AIServiceError as e:
         raise HTTPException(502, str(e))
+
+
+@app.post("/preview", response_class=Response, responses={200: {"content": {"image/jpeg": {}}}})
+async def preview(file: Annotated[UploadFile, File(description="One photo, e.g. an iPhone HEIC")]):
+    """A display-friendly JPEG of a photo: browsers other than Safari can't show HEIC.
+
+    Same rotation fix and size cap as /process-notes, without the contrast enhancement, so it
+    looks like the photo the student took.
+    """
+    if file.content_type not in IMAGE_MIME_TYPES:
+        raise HTTPException(415, "Images must be JPG, PNG, WebP or HEIC")
+    data = await file.read()
+    if len(data) > MAX_IMAGE_BYTES:
+        raise HTTPException(413, "Image too large (20 MB max)")
+    try:
+        jpeg = await asyncio.to_thread(preprocess, data, False)
+    except Exception:
+        raise HTTPException(400, "Could not read that image")
+    return Response(content=jpeg, media_type="image/jpeg")
 
 
 def _parse_ids(values: list[str]) -> list[str]:
