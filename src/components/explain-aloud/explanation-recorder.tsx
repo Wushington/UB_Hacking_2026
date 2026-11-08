@@ -4,7 +4,7 @@ import { LoaderCircle, Mic, RotateCcw, Square, Upload } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { MAX_RECORDING_MS } from "@/contracts/audio";
 import { MAX_UPLOAD_BYTES } from "@/contracts/uploads";
 import { baseAudioMimeType, formatClock, pickRecorderMimeType, type AudioMimeType } from "@/lib/recording";
@@ -13,7 +13,8 @@ import { uploadExplanation, UploadError } from "./upload-explanation";
 
 export type LectureOption = { id: string; title: string };
 
-type Phase = "idle" | "setup" | "requesting" | "recording" | "recorded" | "uploading";
+/** "opening": uploaded; navigating to the new attempt (kept visible so the old attempt isn't mistaken for it). */
+type Phase = "idle" | "setup" | "requesting" | "recording" | "recorded" | "uploading" | "opening";
 type Take = { blob: Blob; url: string; mimeType: AudioMimeType; durationMs: number };
 
 const MAX_MS = MAX_RECORDING_MS.explanation;
@@ -53,7 +54,10 @@ export function ExplanationRecorder({
   backHref: string;
 }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<Phase>("idle");
+  const [navigating, startNavigation] = useTransition();
+  const [rawPhase, setPhase] = useState<Phase>("idle");
+  // Once the navigation transition settles, the new attempt is on screen: treat "opening" as idle.
+  const phase: Phase = rawPhase === "opening" && !navigating ? "idle" : rawPhase;
   const [error, setError] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [levels, setLevels] = useState(quietLevels);
@@ -228,9 +232,12 @@ export function ExplanationRecorder({
     try {
       const id = await uploadExplanation({ blob: take.blob, mimeType: take.mimeType, lectureId, durationMs: take.durationMs });
       clearTake();
-      setPhase("idle");
-      router.push(`/explain?recording=${id}`);
-      router.refresh();
+      // Stay in "opening" until the new attempt has rendered (see the effect below).
+      setPhase("opening");
+      startNavigation(() => {
+        router.push(`/explain?recording=${id}`);
+        router.refresh();
+      });
     } catch (e) {
       setError(e instanceof UploadError ? e.message : "Couldn’t upload your recording. Please try again.");
       setPhase("recorded");
@@ -293,7 +300,13 @@ export function ExplanationRecorder({
         >
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-[17px] leading-[1.5] font-medium sm:text-[19px]">
-              {phase === "recorded" ? "Review your explanation" : phase === "uploading" ? "Uploading…" : "Explain it out loud"}
+              {phase === "recorded"
+                ? "Review your explanation"
+                : phase === "uploading"
+                  ? "Uploading…"
+                  : phase === "opening"
+                    ? "Uploaded"
+                    : "Explain it out loud"}
             </h2>
             <span className="text-[12px] leading-[1.5] text-[#9496bf]">Up to {formatClock(MAX_MS)}</span>
           </div>
@@ -319,6 +332,13 @@ export function ExplanationRecorder({
 
           {phase === "requesting" ? (
             <p className="text-[13px] leading-[1.5] text-[#c1bedf]">Waiting for microphone permission…</p>
+          ) : null}
+
+          {phase === "opening" ? (
+            <p role="status" className="flex items-center gap-2.5 text-[13px] leading-[1.5] text-[#c1bedf]">
+              <LoaderCircle aria-hidden className="size-4 shrink-0 text-[#ff5e7a] motion-safe:animate-spin" />
+              Opening your attempt…
+            </p>
           ) : null}
 
           {phase === "recording" ? (
