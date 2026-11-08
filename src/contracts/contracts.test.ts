@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MAX_RECORDING_MS, transcriptResultSchema, transcriptSegmentSchema } from "./audio";
 import { categoryInputSchema, normalizeCategoryName } from "./categories";
-import { explanationFeedbackSchema } from "./explanations";
+import { explanationFeedbackSchema, selfRatingOutcome, selfRatingSchema } from "./explanations";
 import { flashcardCountSchema, generatedCardsSchema } from "./flashcards";
 import { imageBatchSchema } from "./images";
 import { notesGenerationSchema, notesUpdateSchema } from "./notes";
@@ -164,5 +164,17 @@ describe("concept keys (#24 shared contract with explanation feedback)", () => {
 
   it("returns an empty key when nothing usable remains", () => {
     expect(normalizeConceptKey(" -- ")).toBe("");
+  });
+});
+
+describe("self-rating (clearing weak concepts)", () => {
+  it("accepts whole ratings 1–5 only", () => {
+    for (const rating of [1, 2, 3, 4, 5]) expect(selfRatingSchema.safeParse({ rating }).success).toBe(true);
+    for (const rating of [0, 6, 3.5, "4"]) expect(selfRatingSchema.safeParse({ rating }).success).toBe(false);
+  });
+
+  it("removes at 4 or higher and resolves below", () => {
+    expect([1, 2, 3].map(selfRatingOutcome)).toEqual(["resolved", "resolved", "resolved"]);
+    expect([4, 5].map(selfRatingOutcome)).toEqual(["removed", "removed"]);
   });
 });

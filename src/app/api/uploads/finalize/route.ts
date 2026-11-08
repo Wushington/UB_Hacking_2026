@@ -1,4 +1,5 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { normalizeConceptKey } from "@/contracts/weak-concepts";
 import { after } from "next/server";
 import { finalizeUploadSchema, type FinalizeUploadResponse } from "@/contracts/uploads";
 import { getDb, schema } from "@/db";
@@ -8,7 +9,7 @@ import { deleteObject, headObject, objectKeyFor } from "@/lib/storage";
 import { checkUploadedAudio, recordingPurposeFor } from "@/lib/uploads";
 import { ensureUser } from "@/lib/users";
 
-const { audioRecordings, lectures } = schema;
+const { audioRecordings, lectures, weakConcepts } = schema;
 
 /** Explanation grading runs in after() from this route. */
 export const maxDuration = 120;
@@ -40,6 +41,28 @@ export async function POST(request: Request) {
       .where(and(eq(lectures.id, input.lectureId), eq(lectures.userId, userId)))
       .limit(1);
     if (!lecture) return jsonError(404, "Class not found");
+  }
+
+  // The chosen concept must be one of the student's open weak concepts in that class.
+  let concept: { conceptKey: string; label: string } | null = null;
+  if (input.conceptKey) {
+    if (recordingPurpose !== "explanation" || !input.lectureId) {
+      return jsonError(400, "conceptKey: only an explanation in a class can target a concept");
+    }
+    const [row] = await db
+      .select({ conceptKey: weakConcepts.conceptKey, label: weakConcepts.label })
+      .from(weakConcepts)
+      .where(
+        and(
+          eq(weakConcepts.userId, userId),
+          eq(weakConcepts.lectureId, input.lectureId),
+          eq(weakConcepts.conceptKey, normalizeConceptKey(input.conceptKey)),
+          isNull(weakConcepts.resolvedAt),
+        ),
+      )
+      .limit(1);
+    if (!row) return jsonError(404, "Weak concept not found");
+    concept = row;
   }
 
   // The key is rebuilt from the signed-in user, so nobody can finalize someone else's object.
@@ -77,6 +100,8 @@ export async function POST(request: Request) {
       objectKey,
       mimeType: check.mimeType,
       durationMs: check.durationMs,
+      conceptKey: concept?.conceptKey ?? null,
+      conceptLabel: concept?.label ?? null,
       status: "uploaded",
     })
     .onConflictDoNothing({ target: audioRecordings.objectKey })

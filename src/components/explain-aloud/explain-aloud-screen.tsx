@@ -3,11 +3,17 @@
 import { LoaderCircle } from "lucide-react";
 import Image from "next/image";
 import { useRef, useState, type ReactNode } from "react";
-import { feedbackSpeechText, type ExplainAloudState, type ExplainAloudView } from "@/lib/explain-aloud/view";
+import {
+  feedbackSpeechText,
+  type ConceptOption,
+  type ExplainAloudState,
+  type ExplainAloudView,
+} from "@/lib/explain-aloud/view";
 import { cn } from "@/lib/utils";
 import { ExplanationRecorder, type LectureOption } from "./explanation-recorder";
 import { GradingWatcher, RetryGradingButton } from "./grading-status";
 import { ListenButton } from "./listen-button";
+import { SelfRating } from "./self-rating";
 
 const ASSETS = "/figma/explain-aloud";
 
@@ -15,6 +21,8 @@ export type ExplainAloudScreenProps = {
   view: ExplainAloudView;
   /** The user's classes, for choosing which one a new explanation belongs to. */
   lectures?: LectureOption[];
+  /** The user's open weak concepts, for choosing which one to explain. */
+  concepts?: ConceptOption[];
   className?: string;
   backHref?: string;
 };
@@ -53,6 +61,10 @@ const INTRO: Record<ExplainAloudState, { heading: string; body: string }> = {
     body: "Sign in to see your explanations and feedback.",
   },
   loading: { heading: "Loading your explanation…", body: "Just a moment." },
+  "ready-to-record": {
+    heading: "Explain it out loud.",
+    body: "Record up to 2 minutes in your own words. We’ll check it against your class notes.",
+  },
 };
 
 const EMPTY_COPY: Record<"concept" | "transcript", Partial<Record<ExplainAloudState, string>> & { default: string }> = {
@@ -237,12 +249,19 @@ function FeedbackStatus({ state }: { state: ExplainAloudState }) {
   return null;
 }
 
-export function ExplainAloudScreen({ view, lectures = [], className, backHref = "/weak-concepts" }: ExplainAloudScreenProps) {
+export function ExplainAloudScreen({
+  view,
+  lectures = [],
+  concepts = [],
+  className,
+  backHref = "/weak-concepts",
+}: ExplainAloudScreenProps) {
   const { state, course, concept, recording, transcript, recordedLabel, feedback } = view;
   const intro = INTRO[state];
   /** Content is on its way: the attempt is being analyzed, or the page is still loading. */
   const pending = state === "processing" || state === "loading";
-  const hasAttempt = concept !== null;
+  // A selected concept (ready-to-record) isn't an attempt yet.
+  const hasAttempt = view.recordingId !== null;
   const gaps = feedback?.gaps ?? [];
   const covered = feedback?.covered ?? [];
   const listenRecordingId = feedbackSpeechText(view) !== null ? view.recordingId : null;
@@ -281,11 +300,17 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                   </div>
                   {concept.prompt ? (
                     <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">“{concept.prompt}”</p>
+                  ) : concept.instruction ? (
+                    <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{concept.instruction}</p>
                   ) : (
                     <Placeholder bordered={false}>No question prompt saved for this attempt.</Placeholder>
                   )}
-                  <div className="h-px w-full bg-[#333564]" />
-                  <RecordingPlayer recording={recording} />
+                  {state === "ready-to-record" ? null : (
+                    <>
+                      <div className="h-px w-full bg-[#333564]" />
+                      <RecordingPlayer recording={recording} />
+                    </>
+                  )}
                 </>
               ) : state === "loading" ? (
                 <AnalyzingPlaceholder>{copyFor("concept", state)}</AnalyzingPlaceholder>
@@ -315,7 +340,9 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
 
             <ExplanationRecorder
               lectures={lectures}
+              concepts={concepts}
               defaultLectureId={view.lectureId}
+              defaultConceptKey={view.conceptKey}
               disabled={state === "signed-out" || state === "loading"}
               hasAttempt={hasAttempt}
               backHref={backHref}
@@ -348,6 +375,9 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
             {state === "processing" && view.recordingId ? <GradingWatcher recordingId={view.recordingId} /> : null}
             {feedback?.summary ? (
               <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{feedback.summary}</p>
+            ) : null}
+            {state === "ready" && view.recordingId && feedback && feedback.mastered.length > 0 ? (
+              <SelfRating recordingId={view.recordingId} mastered={feedback.mastered} selfRating={feedback.selfRating} />
             ) : null}
 
             <div className="flex w-full flex-col gap-3 rounded-[12px] bg-[#142b30] p-5">
