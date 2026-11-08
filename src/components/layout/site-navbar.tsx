@@ -82,7 +82,9 @@ function CurrentNavLinks() {
 /** The one site-wide navigation bar (rendered by SiteShell in the root layout). */
 export function SiteNavbar() {
   return (
-    <header className="w-full border-b border-white/5 bg-orbit-surface/50 backdrop-blur-sm">
+    // relative z-40: page sections animate in with a lasting transform (animate-rise), which would
+    // otherwise paint over this header and hide the account menu (and swallow its Sign out click).
+    <header className="relative z-40 w-full border-b border-white/5 bg-orbit-surface/50 backdrop-blur-sm">
       <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 lg:h-20 lg:flex-nowrap lg:px-10 lg:py-0 xl:px-14">
         <Link href="/" className="flex min-h-10 shrink-0 items-center gap-2.5 rounded-lg text-white">
           <Image src="/brand/orbit-study-logo.svg" alt="Orbit Study logo" width={153} height={89} priority className="h-6 w-auto sm:h-7" />
