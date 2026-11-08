@@ -44,7 +44,15 @@ def health():
 
 @app.post("/process-notes", response_model=NotesGeneration, response_model_exclude_none=True)
 async def process_notes(
-    files: Annotated[list[UploadFile], File(description="Images in the student's chosen order")],
+    files: Annotated[
+        list[UploadFile],
+        File(
+            description="Images in the student's chosen order",
+            # Swagger UI (/docs) only shows file pickers for array items marked
+            # format: binary; FastAPI's OpenAPI 3.1 output omits it.
+            json_schema_extra={"items": {"type": "string", "format": "binary"}},
+        ),
+    ],
     image_ids: Annotated[list[UUID], Form(description="One id per file, same order")],
     enhance: bool = True,
 ):
