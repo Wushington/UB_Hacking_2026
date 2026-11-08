@@ -36,6 +36,8 @@ export type GenerateFlashcardsResponse = { deckId: string; requestedCount: numbe
 /** Keeps the prompt bounded; roughly a long lecture's worth of notes. */
 export const MAX_NOTES_CHARS = 60_000;
 const GENERATION_ATTEMPTS = 2;
+/** Gemini HTTP statuses that an immediate retry can't fix: rate/quota limit and auth. */
+const UNRETRYABLE_STATUSES = new Set([401, 403, 429]);
 
 const bodySchema = z.object({ count: flashcardCountSchema });
 
@@ -80,7 +82,13 @@ export async function handleGenerateFlashcards(request: Request, lectureId: stri
   for (let attempt = 0; attempt < GENERATION_ATTEMPTS && cards === null; attempt++) {
     try {
       cards = selectValidCards(await deps.generate(prompt), lecture.notes, count);
-    } catch {
+    } catch (error) {
+      // Message only: never log the prompt or the student's notes.
+      console.error("Flashcard generation failed:", error instanceof Error ? error.message : String(error));
+      // Quota, rate limit or a bad key won't fix itself on an immediate retry; don't spend another request.
+      if (UNRETRYABLE_STATUSES.has((error as { status?: unknown } | null)?.status as number)) {
+        return fail(503, "ai_unavailable", "Flashcards are busy right now. Please try again in a few minutes.");
+      }
       cards = null;
     }
   }

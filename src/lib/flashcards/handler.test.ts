@@ -135,6 +135,33 @@ describe("POST /api/lectures/[id]/flashcards", () => {
     expect(d.saveDeck).not.toHaveBeenCalled();
   });
 
+  it.each([[429], [401], [403]])("does not retry when Gemini answers %s, and says the AI is unavailable", async (status) => {
+    const generate = vi.fn().mockRejectedValue(Object.assign(new Error(`gemini ${status}`), { status }));
+    const d = deps({ generate });
+    const { status: code, body } = await call(d);
+    expect(code).toBe(503);
+    expect(body.error).toEqual({
+      code: "ai_unavailable",
+      message: "Flashcards are busy right now. Please try again in a few minutes.",
+    });
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(d.saveDeck).not.toHaveBeenCalled();
+  });
+
+  it("logs why generation failed, without the prompt", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const d = deps({ generate: vi.fn().mockRejectedValue(Object.assign(new Error("quota exceeded"), { status: 429 })) });
+      await call(d);
+      expect(log).toHaveBeenCalledTimes(1);
+      const logged = log.mock.calls[0].map(String).join(" ");
+      expect(logged).toContain("quota exceeded");
+      expect(logged).not.toContain(NOTES_FIXTURE.notes.title);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it("saves nothing when no generated card is supported by the notes", async () => {
     const d = deps({ generate: vi.fn(async () => ({ cards: [card({ sourceNoteBlockIds: [] })] })) });
     const { status, body } = await call(d);
