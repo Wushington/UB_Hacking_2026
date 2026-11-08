@@ -1,4 +1,4 @@
-"""All Gemini calls live here, so swapping models or providers touches one file."""
+"""All Gemini calls for the AI service live here, so swapping models or providers touches one file."""
 import asyncio
 import os
 
@@ -6,27 +6,29 @@ from google import genai
 from google.genai import errors, types
 from pydantic import BaseModel, ValidationError
 
-from schemas import FlashcardSet, NoteResult
+from schemas import GeminiNotes, NoteBlock, NoteSection, NotesGeneration, SourceRef
 
-# Use the alias so you are not hardcoding a version that gets retired.
-# To pin a specific model, set GEMINI_MODEL in .env (copy the ID from AI Studio).
-MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+# Set GEMINI_MODEL in .env (shared with the Next.js app). The -latest alias is
+# the fallback so we are not hardcoding a version that gets retired.
+MODEL = os.getenv("GEMINI_MODEL", "").strip() or "gemini-flash-latest"
 
 # Reads GEMINI_API_KEY from the environment.
 client = genai.Client()
 
-TRANSCRIBE_PROMPT = """You are transcribing a photo of handwritten notes \
-(notebook, whiteboard, chalkboard, etc.) for a student.
+NOTES_PROMPT = """You are turning photos of handwritten lecture notes \
+(notebook, whiteboard, chalkboard, etc.) into organized study notes for a student.
+The {count} images are numbered 1 to {count} in the order the student chose; \
+treat them as one continuous set of notes.
 
 Rules:
-1. Transcribe FAITHFULLY. Do not fix spelling, grammar, or math inside `content`. \
-Copy mistakes exactly as written.
-2. Put every suggested fix in `corrections` instead, quoting the exact original substring.
-3. Equations go in their own block as LaTeX without $ delimiters.
-4. If you cannot read something, do not invent it. Mark the block `unsure` or \
-`illegible` and list the guessed substrings in `unsure_spans`.
-5. Ignore content that is clearly not notes (room background, erased smudges).
-6. Keep reading order: top to bottom, left to right, respecting columns.
+1. Transcribe faithfully. Do not invent facts that are not in the images. \
+If something is unreadable, leave it out rather than guessing.
+2. Group the content into sections with short headings, in reading order \
+(image order, then top to bottom, left to right, respecting columns).
+3. Choose the block kind that fits: paragraph, bullet, definition, example, or equation.
+4. Equations go in their own `equation` block as LaTeX without $ delimiters.
+5. For every block, list in `source_images` the number(s) of the image(s) it came from.
+6. Ignore content that is clearly not notes (room background, erased smudges).
 """
 
 
@@ -62,35 +64,45 @@ async def _generate(contents, schema: type[BaseModel], retries: int = 2) -> Base
     raise AIServiceError(f"Gemini failed after {retries + 1} attempts: {last_err}")
 
 
-async def transcribe_image(jpeg_bytes: bytes) -> NoteResult:
-    contents = [
-        types.Part.from_bytes(data=jpeg_bytes, mime_type="image/jpeg"),
-        TRANSCRIBE_PROMPT,
-    ]
-    result = await _generate(contents, NoteResult)
-    return _drop_bad_corrections(result)
+async def generate_notes(jpegs: list[bytes], image_ids: list[str]) -> NotesGeneration:
+    """One Gemini call over the whole batch, so sections can span images."""
+    contents: list = []
+    for n, jpeg in enumerate(jpegs, start=1):
+        contents.append(f"Image {n}:")
+        contents.append(types.Part.from_bytes(data=jpeg, mime_type="image/jpeg"))
+    contents.append(NOTES_PROMPT.format(count=len(jpegs)))
+
+    raw = await _generate(contents, GeminiNotes)
+    return _to_contract(raw, image_ids)
 
 
-async def make_flashcards(note: NoteResult, count: int = 10) -> FlashcardSet:
-    # Built from the transcribed text, not the image, so OCR errors don't compound.
-    text = "\n\n".join(b.content for b in note.blocks if b.legibility != "illegible")
-    prompt = (
-        f"Make up to {count} study flashcards from these {note.category} notes. "
-        "Only use facts that appear in the notes. Equations in LaTeX.\n\n" + text
-    )
-    return await _generate([prompt], FlashcardSet)
+def _to_contract(raw: GeminiNotes, image_ids: list[str]) -> NotesGeneration:
+    """Map image numbers to ids and drop anything the contract would reject.
 
-
-def _drop_bad_corrections(note: NoteResult) -> NoteResult:
-    """Throw out corrections whose `original` isn't actually in the block.
-
-    The frontend highlights `original` inside the block text, so a correction
-    that points at text that doesn't exist would break the UI (and usually
-    means the model hallucinated it).
+    Out-of-range image numbers are discarded (the model made them up), as are
+    empty blocks and sections left with no blocks.
     """
-    by_id = {b.id: b.content for b in note.blocks}
-    note.corrections = [
-        c for c in note.corrections
-        if c.block_id in by_id and c.original and c.original in by_id[c.block_id]
-    ]
-    return note
+    sections = []
+    for s in raw.sections:
+        blocks = []
+        for b in s.blocks:
+            text = b.text.strip()
+            if not text:
+                continue
+            nums = sorted({n for n in b.source_images if 1 <= n <= len(image_ids)})
+            blocks.append(NoteBlock(
+                kind=b.kind,
+                text=text,
+                sourceRefs=[SourceRef(imageId=image_ids[n - 1]) for n in nums],
+            ))
+        if blocks:
+            sections.append(NoteSection(heading=s.heading.strip() or "Notes", blocks=blocks))
+    if not sections:
+        raise AIServiceError("Gemini found no readable notes in these images")
+
+    category = (raw.suggested_category_name or "").strip()[:60] or None
+    return NotesGeneration(
+        title=raw.title.strip()[:200] or "Untitled notes",
+        sections=sections,
+        suggestedCategoryName=category,
+    )

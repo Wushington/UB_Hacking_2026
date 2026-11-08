@@ -43,6 +43,21 @@ describe("parseEnv", () => {
     }
   });
 
+  it("defaults GEMINI_MODEL to the -latest alias when unset or blank", () => {
+    expect(parseEnv("gemini", { GEMINI_API_KEY: "k" }).GEMINI_MODEL).toBe("gemini-flash-latest");
+    expect(parseEnv("gemini", { GEMINI_API_KEY: "k", GEMINI_MODEL: " " }).GEMINI_MODEL).toBe("gemini-flash-latest");
+    expect(parseEnv("gemini", { GEMINI_API_KEY: "k", GEMINI_MODEL: "gemini-pro-latest" }).GEMINI_MODEL).toBe(
+      "gemini-pro-latest",
+    );
+  });
+
+  it("requires a URL for the AI service", () => {
+    expect(parseEnv("aiService", { AI_SERVICE_URL: "http://127.0.0.1:8000" }).AI_SERVICE_URL).toBe(
+      "http://127.0.0.1:8000",
+    );
+    expect(() => parseEnv("aiService", { AI_SERVICE_URL: "localhost" })).toThrow(/AI_SERVICE_URL/);
+  });
+
   it("treats empty strings as missing", () => {
     expect(() => parseEnv("gemini", { GEMINI_API_KEY: "" })).toThrow(/GEMINI_API_KEY/);
   });

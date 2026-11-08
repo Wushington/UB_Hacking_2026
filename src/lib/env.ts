@@ -5,7 +5,7 @@ import { z } from "zod";
  * doesn't break pages that only need the database (and vice versa).
  *
  * Server secrets are read only through server-only modules (src/db, src/lib/gemini,
- * src/lib/storage). Only NEXT_PUBLIC_* values may reach the browser.
+ * src/lib/storage, src/lib/ai). Only NEXT_PUBLIC_* values may reach the browser.
  * Clerk reads its own CLERK_SECRET_KEY / NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY directly.
  */
 const required = z.string().trim().min(1, "is required");
@@ -19,6 +19,16 @@ const schemas = {
   }),
   gemini: z.object({
     GEMINI_API_KEY: required,
+    /** Shared with src/ai-service. The -latest alias avoids pinning a version that gets retired. */
+    GEMINI_MODEL: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => v || "gemini-flash-latest"),
+  }),
+  /** The Python image-processing service (src/ai-service). Server-to-server only. */
+  aiService: z.object({
+    AI_SERVICE_URL: z.url(),
   }),
   storage: z.object({
     VULTR_S3_ENDPOINT: z.url(),
