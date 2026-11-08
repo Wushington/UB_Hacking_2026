@@ -6,7 +6,7 @@ const MB = 1024 * 1024;
 
 /** Per-file size limits. Duration limits live in ./audio (MAX_RECORDING_MS). */
 export const MAX_UPLOAD_BYTES = {
-  lecture_image: 10 * MB,
+  lecture_image: 20 * MB,
   lecture_audio: 50 * MB,
   explanation_audio: 10 * MB,
 } as const;
@@ -53,6 +53,8 @@ export const finalizeUploadSchema = z.object({
   purpose: z.enum(UPLOAD_PURPOSES),
   lectureId: z.uuid().optional(),
   durationMs: z.number().int().positive().optional(),
+  /** explanation_audio only: the open weak concept (in lectureId) the student chose to explain. */
+  conceptKey: z.string().trim().min(1).max(80).optional(),
 });
 export type FinalizeUpload = z.infer<typeof finalizeUploadSchema>;
 

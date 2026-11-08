@@ -58,7 +58,9 @@ describe("parseEnv", () => {
     ]);
   });
 
-  it("requires a URL for the AI service", () => {
+  it("defaults the AI service to uvicorn's local address, and validates an override", () => {
+    expect(parseEnv("aiService", {}).AI_SERVICE_URL).toBe("http://127.0.0.1:8000");
+    expect(parseEnv("aiService", { AI_SERVICE_URL: "" }).AI_SERVICE_URL).toBe("http://127.0.0.1:8000");
     expect(parseEnv("aiService", { AI_SERVICE_URL: "http://127.0.0.1:8000" }).AI_SERVICE_URL).toBe(
       "http://127.0.0.1:8000",
     );

@@ -1,14 +1,19 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
-import { feedbackSpeechText, type ExplainAloudState, type ExplainAloudView } from "@/lib/explain-aloud/view";
+import {
+  feedbackSpeechText,
+  type ConceptOption,
+  type ExplainAloudState,
+  type ExplainAloudView,
+} from "@/lib/explain-aloud/view";
 import { cn } from "@/lib/utils";
-import { AccountMenu } from "./account-menu";
 import { ExplanationRecorder, type LectureOption } from "./explanation-recorder";
 import { GradingWatcher, RetryGradingButton } from "./grading-status";
 import { ListenButton } from "./listen-button";
+import { SelfRating } from "./self-rating";
 
 const ASSETS = "/figma/explain-aloud";
 
@@ -16,18 +21,13 @@ export type ExplainAloudScreenProps = {
   view: ExplainAloudView;
   /** The user's classes, for choosing which one a new explanation belongs to. */
   lectures?: LectureOption[];
+  /** The user's open weak concepts, for choosing which one to explain. */
+  concepts?: ConceptOption[];
   className?: string;
   backHref?: string;
 };
 
-const NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "My classes", href: "/classes" },
-  { label: "Quizzes", href: "/quizzes" },
-  { label: "Weak concepts", href: "/weak-concepts", active: true },
-] as const;
 
-const LEARNING_STEPS = ["Capture a class", "Organize notes", "Take a quiz", "Find the gaps", "Explain & improve"];
 
 /** Decorative waveform shape (no amplitude data is stored); playback colors it. */
 const WAVEFORM = [
@@ -46,7 +46,7 @@ const INTRO: Record<ExplainAloudState, { heading: string; body: string }> = {
   },
   processing: {
     heading: "Listening back to your explanation.",
-    body: "Your transcript and feedback will appear here once analysis finishes.",
+    body: "Hang tight. Your transcript and feedback are on their way.",
   },
   failed: {
     heading: "We couldn’t analyze that attempt.",
@@ -61,18 +61,22 @@ const INTRO: Record<ExplainAloudState, { heading: string; body: string }> = {
     body: "Sign in to see your explanations and feedback.",
   },
   loading: { heading: "Loading your explanation…", body: "Just a moment." },
+  "ready-to-record": {
+    heading: "Explain it out loud.",
+    body: "Record up to 2 minutes in your own words. We’ll check it against your class notes.",
+  },
 };
 
 const EMPTY_COPY: Record<"concept" | "transcript", Partial<Record<ExplainAloudState, string>> & { default: string }> = {
   concept: {
     "signed-out": "Sign in to see the concept you practiced.",
-    loading: "Loading…",
+    loading: "Loading your explanation…",
     default: "No explanation recorded yet. Pick a weak concept and explain it in your own words.",
   },
   transcript: {
     "signed-out": "Sign in to see your transcript.",
     loading: "Loading…",
-    processing: "Your transcript will appear here after your explanation is processed.",
+    processing: "Transcribing your explanation…",
     failed: "No transcript. This attempt couldn’t be processed.",
     default: "Your words will appear here after you record an explanation.",
   },
@@ -122,6 +126,32 @@ function Placeholder({ children, bordered = true }: { children: ReactNode; borde
     >
       {children}
     </p>
+  );
+}
+
+/** Dashed placeholder with a spinner: work is in progress (loading, transcribing). */
+function AnalyzingPlaceholder({ children }: { children: string }) {
+  return (
+    <div
+      role="status"
+      aria-label={children}
+      data-analyzing
+      className="flex w-full items-center justify-center gap-2.5 rounded-[12px] border border-dashed border-[#333564] px-5 py-6 text-center text-[13px] leading-[1.5] text-[#c1bedf]"
+    >
+      <LoaderCircle aria-hidden className="size-4 shrink-0 text-[#ff5e7a] motion-safe:animate-spin" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+/** Pulsing bars that hold a section's shape until its content arrives. */
+function SkeletonLines({ widths }: { widths: string[] }) {
+  return (
+    <div aria-hidden data-skeleton className="flex w-full flex-col gap-2.5">
+      {widths.map((width, i) => (
+        <div key={i} className="h-3 rounded-full bg-white/10 motion-safe:animate-pulse" style={{ width }} />
+      ))}
+    </div>
   );
 }
 
@@ -205,74 +235,39 @@ function RecordingPlayer({ recording }: { recording: NonNullable<ExplainAloudVie
 
 function FeedbackStatus({ state }: { state: ExplainAloudState }) {
   if (state === "ready") return <Pill tone="success">Analysis complete</Pill>;
-  if (state === "processing") return <Pill>Analyzing…</Pill>;
+  if (state === "processing") {
+    return (
+      <Pill>
+        <span className="inline-flex items-center gap-1.5">
+          <LoaderCircle aria-hidden className="size-3 motion-safe:animate-spin" />
+          Analyzing…
+        </span>
+      </Pill>
+    );
+  }
   if (state === "failed") return <Pill tone="danger">Analysis failed</Pill>;
   return null;
 }
 
-export function ExplainAloudScreen({ view, lectures = [], className, backHref = "/weak-concepts" }: ExplainAloudScreenProps) {
+export function ExplainAloudScreen({
+  view,
+  lectures = [],
+  concepts = [],
+  className,
+  backHref = "/weak-concepts",
+}: ExplainAloudScreenProps) {
   const { state, course, concept, recording, transcript, recordedLabel, feedback } = view;
   const intro = INTRO[state];
-  const hasAttempt = concept !== null;
+  /** Content is on its way: the attempt is being analyzed, or the page is still loading. */
+  const pending = state === "processing" || state === "loading";
+  // A selected concept (ready-to-record) isn't an attempt yet.
+  const hasAttempt = view.recordingId !== null;
   const gaps = feedback?.gaps ?? [];
   const covered = feedback?.covered ?? [];
   const listenRecordingId = feedbackSpeechText(view) !== null ? view.recordingId : null;
 
   return (
-    <div className={cn("relative isolate flex min-h-dvh w-full flex-col overflow-hidden bg-[#0d0e2a] text-white", className)}>
-      {/* Decorative background layers (bottom-anchored so they stay at the foot of taller mobile pages) */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute top-0 left-0 h-[1080px] w-full min-w-[1440px]">
-          <Image src={`${ASSETS}/star-field.svg`} alt="" fill className="block max-w-none" />
-        </div>
-        <div className="absolute bottom-[-120px] left-0 h-[440px] w-full min-w-[1440px] opacity-24">
-          <Image src={`${ASSETS}/lunar-atmosphere.jpg`} alt="" fill sizes="100vw" loading="eager" className="object-cover" />
-        </div>
-        <div className="absolute bottom-[40px] left-0 h-[280px] w-full bg-gradient-to-b from-[#0d0e2a] to-[rgba(13,14,42,0)]" />
-      </div>
-
-      {/* Navigation */}
-      <header
-        className={cn(
-          "flex w-full shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[rgba(42,43,80,0.25)] bg-[rgba(19,20,48,0.5)] py-3 lg:h-20 lg:flex-nowrap lg:py-0",
-          gutterClass,
-        )}
-      >
-        <Link href="/" className="text-[20px] font-bold tracking-[-0.9px] whitespace-nowrap sm:text-[23px]">
-          Orbit Study
-        </Link>
-        <nav
-          aria-label="Main"
-          className="-mx-1 order-last flex w-full items-center gap-2 overflow-x-auto px-1 lg:order-none lg:mx-0 lg:w-auto lg:overflow-visible lg:px-0"
-        >
-          {NAV_ITEMS.map((item) => {
-            const active = "active" in item && item.active;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "shrink-0 rounded-full px-[14px] py-[8px] text-[13px] leading-[1.5] whitespace-nowrap transition-colors lg:px-[17px] lg:py-[11px]",
-                  active ? "bg-[#ff5e7a] font-semibold text-white" : "text-[#9496bf] hover:text-white",
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="flex items-center gap-4 lg:gap-[22px]">
-          <button type="button" aria-label="Search" className="relative size-[18px] shrink-0">
-            <Icon name="search" width={16} height={16} className="absolute top-0 left-0" />
-          </button>
-          <button type="button" aria-label="Notifications" className="relative size-[18px] shrink-0">
-            <Icon name="notifications" width={18} height={13.5} className="absolute top-0 left-0" />
-          </button>
-          <AccountMenu />
-        </div>
-      </header>
-
+    <div className={cn("mx-auto flex w-full max-w-[1440px] flex-1 flex-col text-white", className)}>
       {/* Workspace */}
       <div
         className={cn("flex w-full flex-1 flex-col gap-6 pt-7 pb-8 sm:gap-7 sm:pt-9", gutterClass)}
@@ -305,12 +300,20 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                   </div>
                   {concept.prompt ? (
                     <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">“{concept.prompt}”</p>
+                  ) : concept.instruction ? (
+                    <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{concept.instruction}</p>
                   ) : (
                     <Placeholder bordered={false}>No question prompt saved for this attempt.</Placeholder>
                   )}
-                  <div className="h-px w-full bg-[#333564]" />
-                  <RecordingPlayer recording={recording} />
+                  {state === "ready-to-record" ? null : (
+                    <>
+                      <div className="h-px w-full bg-[#333564]" />
+                      <RecordingPlayer recording={recording} />
+                    </>
+                  )}
                 </>
+              ) : state === "loading" ? (
+                <AnalyzingPlaceholder>{copyFor("concept", state)}</AnalyzingPlaceholder>
               ) : (
                 <Placeholder>{copyFor("concept", state)}</Placeholder>
               )}
@@ -323,6 +326,8 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
               </div>
               {transcript ? (
                 <p className="w-full text-[15px] leading-[1.85] break-words text-[#c1bedf] sm:text-[17px]">“{transcript}”</p>
+              ) : pending ? (
+                <AnalyzingPlaceholder>{copyFor("transcript", state)}</AnalyzingPlaceholder>
               ) : (
                 <Placeholder>{copyFor("transcript", state)}</Placeholder>
               )}
@@ -335,7 +340,9 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
 
             <ExplanationRecorder
               lectures={lectures}
+              concepts={concepts}
               defaultLectureId={view.lectureId}
+              defaultConceptKey={view.conceptKey}
               disabled={state === "signed-out" || state === "loading"}
               hasAttempt={hasAttempt}
               backHref={backHref}
@@ -355,9 +362,22 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                 <FeedbackStatus state={state} />
               </div>
             </div>
+            {pending ? (
+              <div role="status" className="flex w-full items-start gap-2.5 text-[14px] leading-[1.5] text-[#c1bedf]">
+                <LoaderCircle aria-hidden className="mt-[3px] size-4 shrink-0 text-[#ff5e7a] motion-safe:animate-spin" />
+                <p>
+                  {state === "loading"
+                    ? "Loading your feedback…"
+                    : "Comparing your explanation with your notes. This usually takes 10–30 seconds."}
+                </p>
+              </div>
+            ) : null}
             {state === "processing" && view.recordingId ? <GradingWatcher recordingId={view.recordingId} /> : null}
             {feedback?.summary ? (
               <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{feedback.summary}</p>
+            ) : null}
+            {state === "ready" && view.recordingId && feedback && feedback.mastered.length > 0 ? (
+              <SelfRating recordingId={view.recordingId} mastered={feedback.mastered} selfRating={feedback.selfRating} />
             ) : null}
 
             <div className="flex w-full flex-col gap-3 rounded-[12px] bg-[#142b30] p-5">
@@ -373,6 +393,8 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                     </li>
                   ))}
                 </ul>
+              ) : pending ? (
+                <SkeletonLines widths={["88%", "72%", "80%"]} />
               ) : (
                 <Placeholder bordered={false}>
                   {feedback?.summary
@@ -394,6 +416,8 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                     <p className="text-[#c1bedf]">{gap.detail}</p>
                   </div>
                 ))
+              ) : pending ? (
+                <SkeletonLines widths={["45%", "92%", "64%"]} />
               ) : (
                 <Placeholder bordered={false}>
                   {feedback ? "No gaps found in this explanation. Nice work." : "Gaps in your explanation will show up here."}
@@ -405,38 +429,14 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
               <p className={eyebrowClass}>TRY THIS NEXT{feedback?.nextStep ? " · 45–60 SECONDS" : ""}</p>
               {feedback?.nextStep ? (
                 <p className="text-[14px] leading-[1.5] text-white">{feedback.nextStep}</p>
+              ) : pending ? (
+                <SkeletonLines widths={["95%", "58%"]} />
               ) : (
                 <Placeholder bordered={false}>A suggested next attempt will appear here.</Placeholder>
               )}
             </div>
           </section>
         </div>
-      </div>
-
-      {/* Learning loop */}
-      <div className={cn("flex w-full pb-6 sm:pb-9", gutterClass)}>
-        <nav
-          aria-label="Learning loop"
-          className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto rounded-[18px] bg-[rgba(19,20,48,0.69)] px-[22px] py-4 sm:rounded-[22px] xl:h-[58px] xl:justify-between xl:py-0"
-        >
-          <p className={cn(eyebrowClass, "shrink-0")}>IT ALL CONNECTS</p>
-          {LEARNING_STEPS.map((step, i) => {
-            const last = i === LEARNING_STEPS.length - 1;
-            const label = `${String(i + 1).padStart(2, "0")}  /  ${step}`;
-            return last ? (
-              <p key={step} aria-current="step" className="shrink-0 text-[11px] leading-[1.5] font-semibold whitespace-pre text-[#ff5e7a]">
-                {label}
-              </p>
-            ) : (
-              <div key={step} className="flex shrink-0 items-center gap-2.5 leading-[1.5] text-[#9496bf]">
-                <p className="text-[11px] whitespace-pre">{label}</p>
-                <span aria-hidden className="text-[14px]">
-                  →
-                </span>
-              </div>
-            );
-          })}
-        </nav>
       </div>
     </div>
   );

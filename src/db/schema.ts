@@ -6,13 +6,16 @@
  * verify the parent's user_id before reading or writing children. Clerk authenticates; it does not
  * authorize rows. Media lives in the private bucket; rows store only the object key + metadata.
  */
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
   pgEnum,
   pgTable,
+  smallint,
   text,
   timestamp,
   unique,
@@ -21,6 +24,7 @@ import {
 import { RECORDING_PURPOSES, RECORDING_STATUSES } from "@/contracts/audio";
 import { LECTURE_STATUSES, NOTE_BLOCK_KINDS, type SourceRef } from "@/contracts/notes";
 import { REVIEW_RESULTS, SESSION_STATUSES } from "@/contracts/study";
+import type { MasteredConcept } from "@/contracts/explanations";
 import { WEAK_CONCEPT_SOURCE_TYPES } from "@/contracts/weak-concepts";
 
 const id = () => uuid("id").primaryKey().defaultRandom();
@@ -139,6 +143,13 @@ export const audioRecordings = pgTable(
     mimeType: text("mime_type").notNull(),
     durationMs: integer("duration_ms"),
     status: recordingStatus("status").notNull().default("uploaded"),
+    /**
+     * Explanations only: the weak concept the student chose to explain (weak_concepts.concept_key in
+     * this lecture). Label is copied so the attempt still shows it after the concept is removed.
+     * Null = a free explanation of the whole class.
+     */
+    conceptKey: text("concept_key"),
+    conceptLabel: text("concept_label"),
     createdAt: createdAt(),
   },
   (t) => [index().on(t.userId)],
@@ -177,9 +188,19 @@ export const explanationFeedback = pgTable(
     summary: text("summary"),
     coveredIdeas: jsonb("covered_ideas").$type<string[]>().notNull().default([]),
     nextStep: text("next_step"),
+    /**
+     * Open weak concepts (for this class) this attempt explained soundly, judged at grading time.
+     * Label stored too so it still displays after the student's rating removes the concept.
+     */
+    masteredConcepts: jsonb("mastered_concepts").$type<MasteredConcept[]>().notNull().default([]),
+    /** Student's 1–5 rating of this explanation; null until rated. Confirms clearing masteredConcepts. */
+    selfRating: smallint("self_rating"),
     createdAt: createdAt(),
   },
-  (t) => [index().on(t.userId)],
+  (t) => [
+    index().on(t.userId),
+    check("explanation_feedback_self_rating_range", sql`${t.selfRating} between 1 and 5`),
+  ],
 );
 
 export const explanationWeakPoints = pgTable(
@@ -281,6 +302,12 @@ export const weakConcepts = pgTable(
     missedCount: integer("missed_count").notNull().default(0),
     feedbackCount: integer("feedback_count").notNull().default(0),
     lastSeenAt: ts("last_seen_at").notNull().defaultNow(),
+    /**
+     * Set when the student showed understanding and rated themselves 1–3 (4–5 deletes the row).
+     * Null = open. Lists of weak concepts must filter `resolved_at is null`, and any code that
+     * records a new struggle (explanation weak point, missed quiz card) must set it back to null.
+     */
+    resolvedAt: ts("resolved_at"),
   },
   (t) => [unique().on(t.userId, t.lectureId, t.conceptKey)],
 );

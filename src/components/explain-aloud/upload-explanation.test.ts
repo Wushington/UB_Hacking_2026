@@ -40,9 +40,15 @@ describe("uploadExplanation", () => {
     });
   });
 
+  it("sends the chosen weak concept with finalize", async () => {
+    const fetchImpl = fakeFetch();
+    await uploadExplanation({ ...input(), conceptKey: "atp-synthase" }, fetchImpl);
+    expect(JSON.parse(fetchImpl.mock.calls[2][1]!.body as string)).toMatchObject({ conceptKey: "atp-synthase" });
+  });
+
   it("surfaces the server's message for client errors", async () => {
-    const fetchImpl = fakeFetch({ finalize: Response.json({ error: "Class not found" }, { status: 404 }) });
-    await expect(uploadExplanation(input(), fetchImpl)).rejects.toThrow("Class not found");
+    const fetchImpl = fakeFetch({ finalize: Response.json({ error: "Notes not found" }, { status: 404 }) });
+    await expect(uploadExplanation(input(), fetchImpl)).rejects.toThrow("Notes not found");
   });
 
   it("hides server-side failure details", async () => {

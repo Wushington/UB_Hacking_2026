@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { MAX_RECORDING_MS, transcriptResultSchema, transcriptSegmentSchema } from "./audio";
 import { categoryInputSchema, normalizeCategoryName } from "./categories";
-import { explanationFeedbackSchema } from "./explanations";
+import { explanationFeedbackSchema, selfRatingOutcome, selfRatingSchema } from "./explanations";
 import { flashcardCountSchema, generatedCardsSchema } from "./flashcards";
 import { imageBatchSchema } from "./images";
 import { notesGenerationSchema, notesUpdateSchema } from "./notes";
@@ -14,10 +14,10 @@ const id = (n: number) => `8a3f1d2e-4b5c-4d6e-8f70-${String(n).padStart(12, "0")
 describe("uploads", () => {
   it("accepts JPG/PNG/WebP whiteboard images and rejects other types", () => {
     const base = { purpose: "lecture_image", byteSize: 1024 } as const;
-    for (const mimeType of ["image/jpeg", "image/png", "image/webp"]) {
+    for (const mimeType of ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]) {
       expect(prepareUploadSchema.safeParse({ ...base, mimeType }).success).toBe(true);
     }
-    expect(prepareUploadSchema.safeParse({ ...base, mimeType: "image/heic" }).success).toBe(false);
+    expect(prepareUploadSchema.safeParse({ ...base, mimeType: "image/gif" }).success).toBe(false);
     expect(prepareUploadSchema.safeParse({ ...base, mimeType: "audio/webm" }).success).toBe(false);
   });
 
@@ -29,8 +29,9 @@ describe("uploads", () => {
 });
 
 describe("image batches (#11)", () => {
-  it("requires 2–5 distinct images and keeps their order", () => {
-    expect(imageBatchSchema.safeParse({ imageIds: [id(1)] }).success).toBe(false);
+  it("requires 1–5 distinct images and keeps their order", () => {
+    expect(imageBatchSchema.safeParse({ imageIds: [] }).success).toBe(false);
+    expect(imageBatchSchema.parse({ imageIds: [id(1)] }).imageIds).toEqual([id(1)]);
     expect(imageBatchSchema.safeParse({ imageIds: [1, 2, 3, 4, 5, 6].map(id) }).success).toBe(false);
     expect(imageBatchSchema.safeParse({ imageIds: [id(1), id(1)] }).success).toBe(false);
     expect(imageBatchSchema.parse({ imageIds: [id(3), id(1), id(2)] }).imageIds).toEqual([id(3), id(1), id(2)]);
@@ -164,5 +165,17 @@ describe("concept keys (#24 shared contract with explanation feedback)", () => {
 
   it("returns an empty key when nothing usable remains", () => {
     expect(normalizeConceptKey(" -- ")).toBe("");
+  });
+});
+
+describe("self-rating (clearing weak concepts)", () => {
+  it("accepts whole ratings 1–5 only", () => {
+    for (const rating of [1, 2, 3, 4, 5]) expect(selfRatingSchema.safeParse({ rating }).success).toBe(true);
+    for (const rating of [0, 6, 3.5, "4"]) expect(selfRatingSchema.safeParse({ rating }).success).toBe(false);
+  });
+
+  it("removes at 4 or higher and resolves below", () => {
+    expect([1, 2, 3].map(selfRatingOutcome)).toEqual(["resolved", "resolved", "resolved"]);
+    expect([4, 5].map(selfRatingOutcome)).toEqual(["removed", "removed"]);
   });
 });

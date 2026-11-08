@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { finalizeUploadSchema } from "@/contracts/uploads";
 import { objectKeyFor } from "@/lib/storage";
-import { checkUploadedAudio, recordingPurposeFor } from "./uploads";
+import { checkUploadedAudio, checkUploadedImage, recordingPurposeFor } from "./uploads";
 
 const MB = 1024 * 1024;
 
@@ -62,5 +62,23 @@ describe("upload keys and finalize contract", () => {
     expect(finalizeUploadSchema.safeParse({ uploadId, purpose: "explanation_audio" }).success).toBe(true);
     expect(finalizeUploadSchema.safeParse({ uploadId }).success).toBe(false);
     expect(finalizeUploadSchema.safeParse({ uploadId: "../other-user", purpose: "explanation_audio" }).success).toBe(false);
+    // Optional chosen weak concept.
+    expect(finalizeUploadSchema.parse({ uploadId, purpose: "explanation_audio", conceptKey: "atp-synthase" }).conceptKey).toBe("atp-synthase");
+    expect(finalizeUploadSchema.safeParse({ uploadId, purpose: "explanation_audio", conceptKey: "  " }).success).toBe(false);
+  });
+});
+
+describe("checkUploadedImage", () => {
+  it("accepts the stored whiteboard photo types, including iPhone HEIC", () => {
+    for (const contentType of ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "IMAGE/JPEG; q=1"]) {
+      expect(checkUploadedImage({ byteSize: 1024, contentType }).ok).toBe(true);
+    }
+  });
+
+  it("rejects other types, empty files and files over 20 MB", () => {
+    expect(checkUploadedImage({ byteSize: 1024, contentType: "image/gif" })).toMatchObject({ ok: false });
+    expect(checkUploadedImage({ byteSize: 1024, contentType: null })).toMatchObject({ ok: false });
+    expect(checkUploadedImage({ byteSize: 0, contentType: "image/png" })).toMatchObject({ ok: false, reason: "Empty upload" });
+    expect(checkUploadedImage({ byteSize: 20 * 1024 * 1024 + 1, contentType: "image/png" })).toMatchObject({ ok: false });
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { emptyView, feedbackSpeechText, MAX_SPEECH_CHARS, toExplainAloudView, type ExplainAloudRows } from "./view";
+import { emptyView, feedbackSpeechText, MAX_SPEECH_CHARS, readyToRecordView, toExplainAloudView, type ExplainAloudRows } from "./view";
 
 function rows(overrides: Partial<ExplainAloudRows> = {}): ExplainAloudRows {
   return {
@@ -26,6 +26,7 @@ describe("toExplainAloudView", () => {
       title: "Cellular respiration",
       breadcrumb: "Biology · Cellular respiration",
       prompt: null,
+      instruction: null,
       attemptLabel: "Attempt 2 · Complete",
     });
     expect(view.recording).toEqual({ durationSeconds: 48, audioSrc: "https://storage.example/presigned" });
@@ -57,6 +58,53 @@ describe("toExplainAloudView", () => {
     expect(feedbackSpeechText(view)).toMatch(/Try this next\. Finish with oxygen\.$/);
   });
 
+  it("maps mastered concepts and the self-rating, and mentions them in the Listen script", () => {
+    const mastered = [{ conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role" }];
+    const view = toExplainAloudView(
+      rows({ weakPoints: [], feedback: { transcriptText: "text", masteredConcepts: mastered, selfRating: 2 } }),
+    );
+    expect(view.feedback?.mastered).toEqual(mastered);
+    expect(view.feedback?.selfRating).toBe(2);
+    expect(feedbackSpeechText(view)).toContain("You now explain Give oxygen its specific role correctly.");
+    expect(toExplainAloudView(rows()).feedback).toMatchObject({ mastered: [], selfRating: null });
+  });
+
+  it("titles an attempt on a selected weak concept with the concept, and keeps it for the next attempt", () => {
+    const view = toExplainAloudView(
+      rows({ recording: { ...rows().recording, conceptKey: "oxygen-final-electron-acceptor", conceptLabel: "Give oxygen its specific role" } }),
+    );
+    expect(view.conceptKey).toBe("oxygen-final-electron-acceptor");
+    expect(view.concept).toMatchObject({
+      title: "Give oxygen its specific role",
+      breadcrumb: "Biology · Cellular respiration",
+      instruction: expect.stringMatching(/own words/),
+      attemptLabel: "Attempt 2 · Complete",
+    });
+    // Free explanations look as before.
+    expect(toExplainAloudView(rows()).concept).toMatchObject({ title: "Cellular respiration", instruction: null });
+    expect(toExplainAloudView(rows()).conceptKey).toBeNull();
+  });
+
+  it("builds a ready-to-record view for a selected concept", () => {
+    const view = readyToRecordView({
+      conceptKey: "atp-synthase",
+      label: "Name ATP synthase's job",
+      lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c",
+      lectureTitle: "Cellular respiration",
+      categoryName: null,
+    });
+    expect(view).toMatchObject({
+      state: "ready-to-record",
+      recordingId: null,
+      lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c",
+      conceptKey: "atp-synthase",
+      course: null,
+      concept: { title: "Name ATP synthase's job", breadcrumb: "Cellular respiration", attemptLabel: null },
+      feedback: null,
+    });
+    expect(feedbackSpeechText(view)).toBeNull();
+  });
+
   it("keeps feedback with no weak points", () => {
     const view = toExplainAloudView(rows({ weakPoints: [] }));
     expect(view.state).toBe("ready");
@@ -82,7 +130,7 @@ describe("toExplainAloudView", () => {
       rows({ categoryName: null, lecture: null, recording: { ...rows().recording, durationMs: null } }),
     );
     expect(view.course).toBeNull();
-    expect(view.concept?.title).toBe("Untitled class");
+    expect(view.concept?.title).toBe("Untitled notes");
     expect(view.lectureId).toBeNull();
     expect(view.concept?.breadcrumb).toBeNull();
     expect(view.recording?.durationSeconds).toBeNull();
@@ -103,6 +151,7 @@ describe("emptyView", () => {
       state: "empty",
       recordingId: null,
       lectureId: null,
+      conceptKey: null,
       course: null,
       concept: null,
       recording: null,

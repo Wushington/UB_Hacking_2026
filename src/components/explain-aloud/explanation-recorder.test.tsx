@@ -88,13 +88,31 @@ describe("ExplanationRecorder", () => {
     expect(arg.mimeType).toBe("audio/webm");
     expect(arg.lectureId).toBe(LECTURES[0].id);
     expect(arg.blob.size).toBeGreaterThan(0);
+    // Navigation (mocked) settles immediately: the "opening" panel closes and recording is available again.
+    expect(await screen.findByRole("button", { name: /record an explanation/i })).toBeEnabled();
+    expect(screen.queryByText(/opening your attempt/i)).not.toBeInTheDocument();
   });
 
-  it("asks which class when there are several and no current one", async () => {
+  it("shows 'Opening your attempt…' until the new attempt has loaded", async () => {
+    // A navigation that never settles keeps the transition pending.
+    push.mockImplementation(() => {
+      throw new Promise(() => {});
+    });
+    uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
+    renderRecorder();
+    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
+    await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Opening your attempt…");
+    expect(screen.getByRole("heading", { name: "Uploaded" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /record an explanation/i })).not.toBeInTheDocument();
+  });
+
+  it("asks which notes when there are several and no current one", async () => {
     renderRecorder({ lectures: LECTURES, defaultLectureId: null });
     await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
     expect(getUserMedia).not.toHaveBeenCalled();
-    await userEvent.selectOptions(screen.getByLabelText(/which class/i), LECTURES[1].id);
+    await userEvent.selectOptions(screen.getByLabelText(/which notes/i), LECTURES[1].id);
     await userEvent.click(screen.getByRole("button", { name: /start recording/i }));
     await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
     expect(screen.getByText("For Photosynthesis")).toBeInTheDocument();
@@ -109,19 +127,66 @@ describe("ExplanationRecorder", () => {
 
   it("keeps the take and shows the error when the upload fails", async () => {
     const { UploadError } = await import("./upload-explanation");
-    uploadExplanation.mockRejectedValue(new UploadError("Class not found"));
+    uploadExplanation.mockRejectedValue(new UploadError("Notes not found"));
     renderRecorder();
     await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
     await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
     await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Class not found");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Notes not found");
     expect(screen.getByRole("button", { name: /submit for feedback/i })).toBeEnabled();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("asks which weak concept to explain, and uploads the choice", async () => {
+    uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
+    const concepts = [
+      { id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: LECTURES[0].id },
+      { id: "c2", conceptKey: "light-reactions", label: "Light reactions", lectureId: LECTURES[1].id },
+    ];
+    renderRecorder({ concepts });
+    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    expect(getUserMedia).not.toHaveBeenCalled();
+
+    const select = screen.getByLabelText(/which concept/i);
+    // Only this class's concepts, plus a free explanation.
+    expect([...(select as HTMLSelectElement).options].map((o) => o.text)).toEqual([
+      "Give oxygen its specific role",
+      "Whole class (free explanation)",
+    ]);
+    await userEvent.selectOptions(select, "oxygen-final-electron-acceptor");
+    await userEvent.click(screen.getByRole("button", { name: /start recording/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
+    expect(screen.getByText("Give oxygen its specific role")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
+    await waitFor(() => expect(uploadExplanation).toHaveBeenCalled());
+    expect(uploadExplanation.mock.calls[0][0]).toMatchObject({ conceptKey: "oxygen-final-electron-acceptor" });
+  });
+
+  it("starts right away on a preselected concept and keeps it", async () => {
+    uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
+    const concepts = [{ id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: LECTURES[0].id }];
+    renderRecorder({ concepts, defaultConceptKey: "oxygen-final-electron-acceptor" });
+    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    expect(await screen.findByRole("button", { name: /stop/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /stop/i }));
+    await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
+    await waitFor(() => expect(uploadExplanation).toHaveBeenCalled());
+    expect(uploadExplanation.mock.calls[0][0]).toMatchObject({ conceptKey: "oxygen-final-electron-acceptor" });
+  });
+
+  it("sends no concept for a free explanation", async () => {
+    uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
+    renderRecorder();
+    await userEvent.click(screen.getByRole("button", { name: /record an explanation/i }));
+    await userEvent.click(await screen.findByRole("button", { name: /stop/i }));
+    await userEvent.click(screen.getByRole("button", { name: /submit for feedback/i }));
+    await waitFor(() => expect(uploadExplanation).toHaveBeenCalled());
+    expect(uploadExplanation.mock.calls[0][0].conceptKey).toBeUndefined();
   });
 
   it("is disabled with a hint when the user has no classes", () => {
     renderRecorder({ lectures: [], defaultLectureId: null });
     expect(screen.getByRole("button", { name: /record an explanation/i })).toBeDisabled();
-    expect(screen.getByText(/add a class first/i)).toBeInTheDocument();
+    expect(screen.getByText(/capture some notes first/i)).toBeInTheDocument();
   });
 });

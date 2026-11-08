@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { isUnique } from "./shared";
 
-/** Story #11: JPG/JPEG, PNG and WebP. */
-export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
-export const MIN_IMAGES_PER_BATCH = 2;
+/** Story #11: JPG/JPEG, PNG and WebP, plus HEIC/HEIF (iPhone default; the AI service converts it). */
+export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"] as const;
+export const MIN_IMAGES_PER_BATCH = 1;
 export const MAX_IMAGES_PER_BATCH = 5;
 
 /** POST /api/lectures/[id]/process — finalized image ids in the order the student chose. */

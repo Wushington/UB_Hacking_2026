@@ -4,16 +4,18 @@ import { LoaderCircle, Mic, RotateCcw, Square, Upload } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { MAX_RECORDING_MS } from "@/contracts/audio";
 import { MAX_UPLOAD_BYTES } from "@/contracts/uploads";
 import { baseAudioMimeType, formatClock, pickRecorderMimeType, type AudioMimeType } from "@/lib/recording";
+import type { ConceptOption } from "@/lib/explain-aloud/view";
 import { cn } from "@/lib/utils";
 import { uploadExplanation, UploadError } from "./upload-explanation";
 
 export type LectureOption = { id: string; title: string };
 
-type Phase = "idle" | "setup" | "requesting" | "recording" | "recorded" | "uploading";
+/** "opening": uploaded; navigating to the new attempt (kept visible so the old attempt isn't mistaken for it). */
+type Phase = "idle" | "setup" | "requesting" | "recording" | "recorded" | "uploading" | "opening";
 type Take = { blob: Blob; url: string; mimeType: AudioMimeType; durationMs: number };
 
 const MAX_MS = MAX_RECORDING_MS.explanation;
@@ -41,25 +43,40 @@ function micErrorMessage(error: unknown) {
  */
 export function ExplanationRecorder({
   lectures,
+  concepts = [],
   defaultLectureId,
+  defaultConceptKey = null,
   disabled,
   hasAttempt,
   backHref,
 }: {
   lectures: LectureOption[];
+  /** The user's open weak concepts (all classes); the picker shows those in the chosen class. */
+  concepts?: ConceptOption[];
   defaultLectureId: string | null;
+  /** Concept of the current attempt or the one selected on the Weak concepts page. */
+  defaultConceptKey?: string | null;
   disabled: boolean;
   hasAttempt: boolean;
   backHref: string;
 }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<Phase>("idle");
+  const [navigating, startNavigation] = useTransition();
+  const [rawPhase, setPhase] = useState<Phase>("idle");
+  // Once the navigation transition settles, the new attempt is on screen: treat "opening" as idle.
+  const phase: Phase = rawPhase === "opening" && !navigating ? "idle" : rawPhase;
   const [error, setError] = useState<string | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [levels, setLevels] = useState(quietLevels);
   const [take, setTake] = useState<Take | null>(null);
   const [lectureId, setLectureId] = useState<string>(
     defaultLectureId && lectures.some((l) => l.id === defaultLectureId) ? defaultLectureId : (lectures[0]?.id ?? ""),
+  );
+  /** "" = a free explanation of the whole class. */
+  const [conceptKey, setConceptKey] = useState<string>(
+    defaultConceptKey && concepts.some((c) => c.lectureId === lectureId && c.conceptKey === defaultConceptKey)
+      ? defaultConceptKey
+      : "",
   );
 
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -73,6 +90,14 @@ export function ExplanationRecorder({
 
   const lecture = lectures.find((l) => l.id === lectureId) ?? null;
   const noClasses = lectures.length === 0;
+  const classConcepts = concepts.filter((c) => c.lectureId === lectureId);
+  const concept = classConcepts.find((c) => c.conceptKey === conceptKey) ?? null;
+
+  function chooseLecture(id: string) {
+    setLectureId(id);
+    // Concepts belong to a class; keep the choice only if it exists in the new class.
+    if (!concepts.some((c) => c.lectureId === id && c.conceptKey === conceptKey)) setConceptKey("");
+  }
 
   function stopMeters() {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -136,7 +161,7 @@ export function ExplanationRecorder({
   async function startRecording() {
     setError(null);
     if (!lectureId) {
-      setError("Choose a class first.");
+      setError("Choose your notes first.");
       return;
     }
     if (typeof window === "undefined" || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
@@ -159,7 +184,7 @@ export function ExplanationRecorder({
     } catch (e) {
       if (attempt !== attemptRef.current) return;
       setError(micErrorMessage(e));
-      setPhase(lectures.length > 1 ? "setup" : "idle");
+      setPhase(lectures.length > 1 || classConcepts.length > 0 ? "setup" : "idle");
       return;
     }
     if (attempt !== attemptRef.current) {
@@ -226,11 +251,20 @@ export function ExplanationRecorder({
     setError(null);
     setPhase("uploading");
     try {
-      const id = await uploadExplanation({ blob: take.blob, mimeType: take.mimeType, lectureId, durationMs: take.durationMs });
+      const id = await uploadExplanation({
+        blob: take.blob,
+        mimeType: take.mimeType,
+        lectureId,
+        durationMs: take.durationMs,
+        conceptKey: concept?.conceptKey,
+      });
       clearTake();
-      setPhase("idle");
-      router.push(`/explain?recording=${id}`);
-      router.refresh();
+      // Stay in "opening" until the new attempt has rendered (see the effect below).
+      setPhase("opening");
+      startNavigation(() => {
+        router.push(`/explain?recording=${id}`);
+        router.refresh();
+      });
     } catch (e) {
       setError(e instanceof UploadError ? e.message : "Couldn’t upload your recording. Please try again.");
       setPhase("recorded");
@@ -239,8 +273,11 @@ export function ExplanationRecorder({
 
   function onRecordClick() {
     setError(null);
-    // Ask which class only when it isn't obvious from the current attempt.
-    if (lectures.length > 1 && !(defaultLectureId && lectures.some((l) => l.id === defaultLectureId))) {
+    // Ask first unless it's obvious: the class from the current attempt, and either a concept
+    // already chosen (current attempt / Weak concepts page) or no open concepts to choose from.
+    const classKnown = lectures.length === 1 || Boolean(defaultLectureId && lectures.some((l) => l.id === defaultLectureId));
+    const conceptKnown = concept !== null || classConcepts.length === 0;
+    if (!classKnown || !conceptKnown) {
       setPhase("setup");
     } else {
       void startRecording();
@@ -250,160 +287,266 @@ export function ExplanationRecorder({
   const panelOpen = phase !== "idle";
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <div className="flex w-full flex-col-reverse items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <Link href={backHref} className="text-[12px] leading-[1.5] text-[#ff5e7a] hover:underline">
-          ← Back to weak concepts
-        </Link>
-        {!panelOpen ? (
-          <button
-            type="button"
-            onClick={onRecordClick}
-            disabled={disabled || noClasses}
-            className={cn(primaryButton, "w-full sm:w-auto")}
-          >
-            <Image
-              src="/figma/explain-aloud/mic.svg"
-              alt=""
-              width={18}
-              height={18}
-              style={{ width: 18, height: 18 }}
-              className="block max-w-none"
-            />
-            {hasAttempt ? "Record another attempt" : "Record an explanation"}
-          </button>
-        ) : null}
-      </div>
+		<div className="flex w-full flex-col gap-4">
+			<div className="flex w-full flex-col-reverse items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<Link
+					href={backHref}
+					className="text-[12px] leading-[1.5] text-[#ff5e7a] hover:underline"
+				>
+					← Back to weak concepts
+				</Link>
+				{!panelOpen ?
+					<button
+						type="button"
+						onClick={onRecordClick}
+						disabled={disabled || noClasses}
+						className={cn(primaryButton, "w-full sm:w-auto")}
+					>
+						<Image
+							src="/figma/explain-aloud/mic.svg"
+							alt=""
+							width={18}
+							height={18}
+							style={{ width: 18, height: 18 }}
+							className="block max-w-none"
+						/>
+						{hasAttempt ? "Record another attempt" : "Record an explanation"}
+					</button>
+				:	null}
+			</div>
 
-      {!panelOpen && noClasses && !disabled ? (
-        <p className="text-[12px] leading-[1.5] text-[#9496bf] sm:text-right">
-          Add a class first. Explanations are checked against that class’s notes.
-        </p>
-      ) : null}
-      {!panelOpen && error ? (
-        <p role="alert" className="text-[12px] leading-[1.5] text-[#ff5e7a] sm:text-right">
-          {error}
-        </p>
-      ) : null}
+			{!panelOpen && noClasses && !disabled ?
+				<p className="text-[12px] leading-[1.5] text-[#9496bf] sm:text-right">
+					Capture some notes first. Explanations are checked against them.
+				</p>
+			:	null}
+			{!panelOpen && error ?
+				<p
+					role="alert"
+					className="text-[12px] leading-[1.5] text-[#ff5e7a] sm:text-right"
+				>
+					{error}
+				</p>
+			:	null}
 
-      {panelOpen ? (
-        <section
-          aria-label="Record your explanation"
-          className="flex w-full flex-col gap-4 rounded-[18px] bg-[#161730] p-5 shadow-[0px_6px_24px_0px_rgba(0,0,0,0.13)] sm:rounded-[22px] sm:p-7"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[17px] leading-[1.5] font-medium sm:text-[19px]">
-              {phase === "recorded" ? "Review your explanation" : phase === "uploading" ? "Uploading…" : "Explain it out loud"}
-            </h2>
-            <span className="text-[12px] leading-[1.5] text-[#9496bf]">Up to {formatClock(MAX_MS)}</span>
-          </div>
+			{panelOpen ?
+				<section
+					aria-label="Record your explanation"
+					className="flex w-full flex-col gap-4 rounded-[18px] bg-[#161730] p-5 shadow-[0px_6px_24px_0px_rgba(0,0,0,0.13)] sm:rounded-[22px] sm:p-7"
+				>
+					<div className="flex flex-wrap items-center justify-between gap-2">
+						<h2 className="text-[17px] leading-[1.5] font-medium sm:text-[19px]">
+							{phase === "recorded" ?
+								"Review your explanation"
+							: phase === "uploading" ?
+								"Uploading…"
+							: phase === "opening" ?
+								"Uploaded"
+							:	"Explain it out loud"}
+						</h2>
+						<span className="text-[12px] leading-[1.5] text-[#9496bf]">
+							Up to {formatClock(MAX_MS)}
+						</span>
+					</div>
 
-          {phase === "setup" ? (
-            <label className="flex flex-col gap-1.5 text-[12px] leading-[1.5] text-[#9496bf]">
-              Which class is this for?
-              <select
-                value={lectureId}
-                onChange={(e) => setLectureId(e.target.value)}
-                className="h-[42px] rounded-[10px] border border-[#333564] bg-[#0d0e2a] px-3 text-[14px] text-white"
-              >
-                {lectures.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.title}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : lecture ? (
-            <p className="text-[12px] leading-[1.5] text-[#9496bf]">For {lecture.title}</p>
-          ) : null}
+					{phase === "setup" ?
+						<div className="flex flex-col gap-3">
+							{lectures.length > 1 ?
+								<label className="flex flex-col gap-1.5 text-[12px] leading-[1.5] text-[#9496bf]">
+									Which subject is this for?
+									<select
+										value={lectureId}
+										onChange={(e) => setLectureId(e.target.value)}
+										className="h-[42px] rounded-[10px] border border-[#333564] bg-[#0d0e2a] px-3 text-[14px] text-white"
+									>
+										{lectures.map((l) => (
+											<option key={l.id} value={l.id}>
+												{l.title}
+											</option>
+										))}
+									</select>
+								</label>
+							:	null}
+							{classConcepts.length > 0 ?
+								<label className="flex flex-col gap-1.5 text-[12px] leading-[1.5] text-[#9496bf]">
+									Which concept will you explain?
+									<select
+										value={conceptKey}
+										onChange={(e) => setConceptKey(e.target.value)}
+										className="h-[42px] rounded-[10px] border border-[#333564] bg-[#0d0e2a] px-3 text-[14px] text-white"
+									>
+										{classConcepts.map((c) => (
+											<option key={c.id} value={c.conceptKey}>
+												{c.label}
+											</option>
+										))}
+										<option value="">Whole class (free explanation)</option>
+									</select>
+								</label>
+							:	null}
+						</div>
+					: lecture ?
+						<p className="text-[12px] leading-[1.5] text-[#9496bf]">
+							{concept ?
+								<>
+									Explaining{" "}
+									<span className="font-medium text-[#e8e6ff]">
+										{concept.label}
+									</span>{" "}
+									· {lecture.title}
+								</>
+							:	<>For {lecture.title}</>}
+						</p>
+					:	null}
 
-          {phase === "requesting" ? (
-            <p className="text-[13px] leading-[1.5] text-[#c1bedf]">Waiting for microphone permission…</p>
-          ) : null}
+					{phase === "requesting" ?
+						<p className="text-[13px] leading-[1.5] text-[#c1bedf]">
+							Waiting for microphone permission…
+						</p>
+					:	null}
 
-          {phase === "recording" ? (
-            <div className="flex w-full items-center gap-4">
-              <span className="relative flex size-3 shrink-0" aria-hidden>
-                <span className="absolute inline-flex size-full animate-ping rounded-full bg-[#ff5e7a] opacity-60" />
-                <span className="relative inline-flex size-3 rounded-full bg-[#ff5e7a]" />
-              </span>
-              <div className="flex h-[42px] min-w-0 flex-1 items-center gap-1 overflow-clip" aria-hidden>
-                {levels.map((h, i) => (
-                  <div key={i} className="w-[3px] shrink-0 rounded-[3px] bg-[#ff5e7a]" style={{ height: h }} />
-                ))}
-              </div>
-              <p className="shrink-0 text-[12px] leading-[1.5] text-[#9496bf] tabular-nums" aria-live="off">
-                <span className="sr-only">Recording, </span>
-                {formatClock(elapsedMs)} / {formatClock(MAX_MS)}
-              </p>
-            </div>
-          ) : null}
+					{phase === "opening" ?
+						<p
+							role="status"
+							className="flex items-center gap-2.5 text-[13px] leading-[1.5] text-[#c1bedf]"
+						>
+							<LoaderCircle
+								aria-hidden
+								className="size-4 shrink-0 text-[#ff5e7a] motion-safe:animate-spin"
+							/>
+							Opening your attempt…
+						</p>
+					:	null}
 
-          {(phase === "recorded" || phase === "uploading") && take ? (
-            <div className="flex flex-col gap-2">
-              <audio controls src={take.url} className="w-full" aria-label="Your recorded explanation" />
-              <p className="text-[11px] leading-[1.5] text-[#9496bf]">
-                {formatClock(take.durationMs)} recorded · Only you can see this practice
-              </p>
-            </div>
-          ) : null}
+					{phase === "recording" ?
+						<div className="flex w-full items-center gap-4">
+							<span className="relative flex size-3 shrink-0" aria-hidden>
+								<span className="absolute inline-flex size-full animate-ping rounded-full bg-[#ff5e7a] opacity-60" />
+								<span className="relative inline-flex size-3 rounded-full bg-[#ff5e7a]" />
+							</span>
+							<div
+								className="flex h-[42px] min-w-0 flex-1 items-center gap-1 overflow-clip"
+								aria-hidden
+							>
+								{levels.map((h, i) => (
+									<div
+										key={i}
+										className="w-[3px] shrink-0 rounded-[3px] bg-[#ff5e7a]"
+										style={{ height: h }}
+									/>
+								))}
+							</div>
+							<p
+								className="shrink-0 text-[12px] leading-[1.5] text-[#9496bf] tabular-nums"
+								aria-live="off"
+							>
+								<span className="sr-only">Recording, </span>
+								{formatClock(elapsedMs)} / {formatClock(MAX_MS)}
+							</p>
+						</div>
+					:	null}
 
-          {error ? (
-            <p role="alert" className="text-[12px] leading-[1.5] text-[#ff5e7a]">
-              {error}
-            </p>
-          ) : null}
+					{(phase === "recorded" || phase === "uploading") && take ?
+						<div className="flex flex-col gap-2">
+							<audio
+								controls
+								src={take.url}
+								className="w-full"
+								aria-label="Your recorded explanation"
+							/>
+							<p className="text-[11px] leading-[1.5] text-[#9496bf]">
+								{formatClock(take.durationMs)} recorded · Only you can see this
+								practice
+							</p>
+						</div>
+					:	null}
 
-          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            {phase === "setup" ? (
-              <>
-                <button type="button" onClick={cancel} className={secondaryButton}>
-                  Cancel
-                </button>
-                <button type="button" onClick={() => void startRecording()} className={primaryButton}>
-                  <Mic aria-hidden className="size-[18px]" />
-                  Start recording
-                </button>
-              </>
-            ) : null}
-            {phase === "requesting" ? (
-              <button type="button" onClick={cancel} className={secondaryButton}>
-                Cancel
-              </button>
-            ) : null}
-            {phase === "recording" ? (
-              <button type="button" onClick={stopRecording} className={primaryButton}>
-                <Square aria-hidden className="size-4 fill-current" />
-                Stop
-              </button>
-            ) : null}
-            {phase === "recorded" || phase === "uploading" ? (
-              <>
-                <button type="button" onClick={cancel} disabled={phase === "uploading"} className={secondaryButton}>
-                  Discard
-                </button>
-                <button
-                  type="button"
-                  onClick={() => void startRecording()}
-                  disabled={phase === "uploading"}
-                  className={secondaryButton}
-                >
-                  <RotateCcw aria-hidden className="size-4" />
-                  Re-record
-                </button>
-                <button type="button" onClick={() => void submit()} disabled={phase === "uploading"} className={primaryButton}>
-                  {phase === "uploading" ? (
-                    <LoaderCircle aria-hidden className="size-[18px] animate-spin" />
-                  ) : (
-                    <Upload aria-hidden className="size-[18px]" />
-                  )}
-                  {phase === "uploading" ? "Uploading…" : "Submit for feedback"}
-                </button>
-              </>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-    </div>
-  );
+					{error ?
+						<p
+							role="alert"
+							className="text-[12px] leading-[1.5] text-[#ff5e7a]"
+						>
+							{error}
+						</p>
+					:	null}
+
+					<div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+						{phase === "setup" ?
+							<>
+								<button
+									type="button"
+									onClick={cancel}
+									className={secondaryButton}
+								>
+									Cancel
+								</button>
+								<button
+									type="button"
+									onClick={() => void startRecording()}
+									className={primaryButton}
+								>
+									<Mic aria-hidden className="size-[18px]" />
+									Start recording
+								</button>
+							</>
+						:	null}
+						{phase === "requesting" ?
+							<button
+								type="button"
+								onClick={cancel}
+								className={secondaryButton}
+							>
+								Cancel
+							</button>
+						:	null}
+						{phase === "recording" ?
+							<button
+								type="button"
+								onClick={stopRecording}
+								className={primaryButton}
+							>
+								<Square aria-hidden className="size-4 fill-current" />
+								Stop
+							</button>
+						:	null}
+						{phase === "recorded" || phase === "uploading" ?
+							<>
+								<button
+									type="button"
+									onClick={cancel}
+									disabled={phase === "uploading"}
+									className={secondaryButton}
+								>
+									Discard
+								</button>
+								<button
+									type="button"
+									onClick={() => void startRecording()}
+									disabled={phase === "uploading"}
+									className={secondaryButton}
+								>
+									<RotateCcw aria-hidden className="size-4" />
+									Re-record
+								</button>
+								<button
+									type="button"
+									onClick={() => void submit()}
+									disabled={phase === "uploading"}
+									className={primaryButton}
+								>
+									{phase === "uploading" ?
+										<LoaderCircle
+											aria-hidden
+											className="size-[18px] animate-spin"
+										/>
+									:	<Upload aria-hidden className="size-[18px]" />}
+									{phase === "uploading" ? "Uploading…" : "Submit for feedback"}
+								</button>
+							</>
+						:	null}
+					</div>
+				</section>
+			:	null}
+		</div>
+	);
 }

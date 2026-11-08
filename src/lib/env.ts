@@ -39,7 +39,13 @@ const schemas = {
   }),
   /** The Python image-processing service (src/ai-service). Server-to-server only. */
   aiService: z.object({
-    AI_SERVICE_URL: z.url(),
+    /** Defaults to uvicorn's default address; the service always runs on the same machine as Next.js. */
+    AI_SERVICE_URL: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => v || "http://127.0.0.1:8000")
+      .pipe(z.url()),
   }),
   elevenlabs: z.object({
     ELEVENLABS_API_KEY: required,

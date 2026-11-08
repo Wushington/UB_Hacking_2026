@@ -62,8 +62,28 @@ describe("generateNotesFromImages", () => {
     await expect(generateNotesFromImages(images, { fetchImpl })).rejects.toThrow(/unreachable/);
   });
 
-  it("requires AI_SERVICE_URL", async () => {
-    vi.stubEnv("AI_SERVICE_URL", "");
-    await expect(generateNotesFromImages(images, { fetchImpl: respond(notes()) })).rejects.toThrow(/AI_SERVICE_URL/);
+  it("rejects a malformed AI_SERVICE_URL as unreachable", async () => {
+    vi.stubEnv("AI_SERVICE_URL", "not a url");
+    await expect(generateNotesFromImages(images, { fetchImpl: respond(notes()) })).rejects.toMatchObject({ reason: "unreachable" });
+  });
+});
+
+describe("generateNotesFromImages connection failures", () => {
+  beforeEach(() => vi.stubEnv("AI_SERVICE_URL", ""));
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("defaults to uvicorn's address and marks a refused connection as unreachable", async () => {
+    const refused = Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNREFUSED" } });
+    const fetchImpl = vi.fn<typeof fetch>().mockRejectedValue(refused);
+    const error = await generateNotesFromImages(images, { fetchImpl }).catch((e) => e);
+    expect(String(fetchImpl.mock.calls[0][0])).toBe("http://127.0.0.1:8000/process-notes");
+    expect(error).toMatchObject({ reason: "unreachable" });
+    expect(error.message).toContain("ECONNREFUSED");
+  });
+
+  it("treats a timeout as a failure, not an outage", async () => {
+    const timeout = Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" });
+    const error = await generateNotesFromImages(images, { fetchImpl: vi.fn<typeof fetch>().mockRejectedValue(timeout) }).catch((e) => e);
+    expect(error).toMatchObject({ reason: "failed" });
   });
 });

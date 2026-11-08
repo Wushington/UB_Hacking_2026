@@ -1,21 +1,23 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import { normalizeConceptKey } from "@/contracts/weak-concepts";
 import { after } from "next/server";
 import { finalizeUploadSchema, type FinalizeUploadResponse } from "@/contracts/uploads";
 import { getDb, schema } from "@/db";
 import { jsonError, parseJson, userIdOr401 } from "@/lib/api";
 import { claimForGrading, runGrading } from "@/lib/explain-aloud/grade";
+import { finalizeLectureImage } from "@/lib/lectures/store";
 import { deleteObject, headObject, objectKeyFor } from "@/lib/storage";
 import { checkUploadedAudio, recordingPurposeFor } from "@/lib/uploads";
 import { ensureUser } from "@/lib/users";
 
-const { audioRecordings, lectures } = schema;
+const { audioRecordings, lectures, weakConcepts } = schema;
 
 /** Explanation grading runs in after() from this route. */
 export const maxDuration = 120;
 
 /**
  * Step 2 of an upload: checks the object really exists in the owner's namespace, validates what
- * was stored, and creates the media row. Idempotent: finalizing the same upload twice returns
+ * was stored, and creates the media row (lecture_images for whiteboard photos, audio_recordings otherwise). Idempotent: finalizing the same upload twice returns
  * the same row.
  */
 export async function POST(request: Request) {
@@ -25,11 +27,17 @@ export async function POST(request: Request) {
   const input = await parseJson(request, finalizeUploadSchema);
   if (input instanceof Response) return input;
 
+  if (input.purpose === "lecture_image") {
+    if (!input.lectureId) return jsonError(400, "lectureId: a photo must belong to a set of notes");
+    const result = await finalizeLectureImage(userId, input.uploadId, input.lectureId);
+    if (!result.ok) return jsonError(result.status, result.error);
+    return Response.json({ id: result.id } satisfies FinalizeUploadResponse, { status: result.created ? 201 : 200 });
+  }
+
   const recordingPurpose = recordingPurposeFor(input.purpose);
-  // Whiteboard images are finalized by the Capture feature, which isn't built yet.
-  if (!recordingPurpose) return jsonError(501, "Image uploads aren't supported yet");
+  if (!recordingPurpose) return jsonError(400, "Unsupported upload purpose");
   if (recordingPurpose === "explanation" && !input.lectureId) {
-    return jsonError(400, "lectureId: an explanation must belong to a class");
+    return jsonError(400, "lectureId: an explanation must belong to a set of notes");
   }
 
   const db = getDb();
@@ -39,7 +47,29 @@ export async function POST(request: Request) {
       .from(lectures)
       .where(and(eq(lectures.id, input.lectureId), eq(lectures.userId, userId)))
       .limit(1);
-    if (!lecture) return jsonError(404, "Class not found");
+    if (!lecture) return jsonError(404, "Notes not found");
+  }
+
+  // The chosen concept must be one of the student's open weak concepts in that class.
+  let concept: { conceptKey: string; label: string } | null = null;
+  if (input.conceptKey) {
+    if (recordingPurpose !== "explanation" || !input.lectureId) {
+      return jsonError(400, "conceptKey: only an explanation in a class can target a concept");
+    }
+    const [row] = await db
+      .select({ conceptKey: weakConcepts.conceptKey, label: weakConcepts.label })
+      .from(weakConcepts)
+      .where(
+        and(
+          eq(weakConcepts.userId, userId),
+          eq(weakConcepts.lectureId, input.lectureId),
+          eq(weakConcepts.conceptKey, normalizeConceptKey(input.conceptKey)),
+          isNull(weakConcepts.resolvedAt),
+        ),
+      )
+      .limit(1);
+    if (!row) return jsonError(404, "Weak concept not found");
+    concept = row;
   }
 
   // The key is rebuilt from the signed-in user, so nobody can finalize someone else's object.
@@ -77,6 +107,8 @@ export async function POST(request: Request) {
       objectKey,
       mimeType: check.mimeType,
       durationMs: check.durationMs,
+      conceptKey: concept?.conceptKey ?? null,
+      conceptLabel: concept?.label ?? null,
       status: "uploaded",
     })
     .onConflictDoNothing({ target: audioRecordings.objectKey })

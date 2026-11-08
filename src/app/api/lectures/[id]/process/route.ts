@@ -10,7 +10,7 @@ import { getObjectBytes } from "@/lib/storage";
 const { lectures, lectureImages, noteBlocks, noteSections } = schema;
 
 /**
- * POST /api/lectures/[id]/process — body: { imageIds } (2–5, in the student's order).
+ * POST /api/lectures/[id]/process — body: { imageIds } (1–5, in the student's order).
  * Sends the lecture's images to the AI service and saves the generated notes.
  * Returns ProcessedNotes (same shape as GET /api/lectures/[id]).
  */
@@ -49,7 +49,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lectures/[i
     );
   if (rows.length !== imageIds.length) return problem(422, "Some images don't belong to this lecture");
   if (rows.some((r) => !(IMAGE_MIME_TYPES as readonly string[]).includes(r.mimeType))) {
-    return problem(422, "Images must be JPG, PNG or WebP");
+    return problem(422, "Images must be JPG, PNG, WebP or HEIC");
   }
 
   // Claim the lecture atomically so a double-click can't process it twice.
@@ -108,6 +108,11 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lectures/[i
     await db.update(lectures).set({ status: "failed" }).where(owned);
     if (error instanceof AiServiceError) {
       console.error("Note generation failed:", error.message);
+      if (error.reason === "unreachable") {
+        // The details (URL, connection error) are in the server log above; in development, show them too.
+        const hint = process.env.NODE_ENV === "development" ? ` ${error.message}. Is uvicorn running (see README)?` : "";
+        return problem(503, `The note organizer isn't available right now. Please try again in a moment.${hint}`);
+      }
       // 4xx from the service means it rejected an image; anything else is an upstream failure.
       return error.status !== undefined && error.status < 500
         ? problem(422, "One of the images couldn't be read. Try a different photo.")
