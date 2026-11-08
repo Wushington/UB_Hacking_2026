@@ -65,7 +65,7 @@ describe("DashboardScreen", () => {
 
   it("makes uploading photos the one dominant action", () => {
     render(<DashboardScreen view={fullView} />);
-    const upload = screen.getByRole("link", { name: "Upload Whiteboard Photos" });
+    const upload = screen.getByRole("link", { name: "Upload Photos" });
     expect(upload).toHaveAttribute("href", "/capture");
     expect(upload).toHaveClass("bg-orbit-accent");
     const solid = [...screen.getAllByRole("link"), ...screen.getAllByRole("button")].filter((el) => el.classList.contains("bg-orbit-accent"));
