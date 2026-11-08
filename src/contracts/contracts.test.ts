@@ -7,7 +7,7 @@ import { imageBatchSchema } from "./images";
 import { notesGenerationSchema, notesUpdateSchema } from "./notes";
 import { completeSessionSchema } from "./study";
 import { prepareUploadSchema } from "./uploads";
-import { weakConceptViewSchema } from "./weak-concepts";
+import { normalizeConceptKey, weakConceptViewSchema } from "./weak-concepts";
 
 const id = (n: number) => `8a3f1d2e-4b5c-4d6e-8f70-${String(n).padStart(12, "0")}`;
 
@@ -139,9 +139,30 @@ describe("weak concepts (#24)", () => {
       missedCardCount: 2,
       explanationFeedbackCount: 1,
       lastSeenAt: "2026-11-07T20:00:00.000Z",
-      relatedCardIds: [id(3)],
+      lectureTitle: "Cell division",
+      relatedCards: [{ id: id(3), question: "What is mitosis?", answer: "Cell division." }],
+      feedbackRecordingId: id(4),
     };
     expect(weakConceptViewSchema.parse(view)).toEqual(view);
     expect(weakConceptViewSchema.safeParse({ ...view, missedCardCount: -1 }).success).toBe(false);
+    expect(weakConceptViewSchema.parse({ ...view, feedbackRecordingId: null }).feedbackRecordingId).toBeNull();
+  });
+});
+
+describe("concept keys (#24 shared contract with explanation feedback)", () => {
+  it("normalizes flashcard and weak-point keys to one stable identifier", () => {
+    expect(normalizeConceptKey("Glycolysis-Location")).toBe("glycolysis-location");
+    expect(normalizeConceptKey("  glycolysis   location ")).toBe("glycolysis-location");
+    expect(normalizeConceptKey("glycolysis_location")).toBe("glycolysis-location");
+    expect(normalizeConceptKey("Krebs: cycle / location!")).toBe("krebs-cycle-location");
+  });
+
+  it("matches the explanation grader's keys (accents stripped, at most 80 chars)", () => {
+    expect(normalizeConceptKey("Énergie d'activation")).toBe("energie-d-activation");
+    expect(normalizeConceptKey("a".repeat(100))).toHaveLength(80);
+  });
+
+  it("returns an empty key when nothing usable remains", () => {
+    expect(normalizeConceptKey(" -- ")).toBe("");
   });
 });

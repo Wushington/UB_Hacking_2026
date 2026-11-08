@@ -4,10 +4,11 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/layout/app-header";
+import { SiteShell } from "@/components/layout/site-shell";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
 });
 

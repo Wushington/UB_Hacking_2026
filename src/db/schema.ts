@@ -173,6 +173,10 @@ export const explanationFeedback = pgTable(
       .references(() => lectures.id, { onDelete: "cascade" }),
     userId: owner(),
     transcriptText: text("transcript_text").notNull(),
+    /** Coaching parts of the feedback; null/empty for feedback saved before they existed. */
+    summary: text("summary"),
+    coveredIdeas: jsonb("covered_ideas").$type<string[]>().notNull().default([]),
+    nextStep: text("next_step"),
     createdAt: createdAt(),
   },
   (t) => [index().on(t.userId)],

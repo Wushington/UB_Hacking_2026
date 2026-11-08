@@ -1,7 +1,13 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import type { UploadPurpose } from "@/contracts/uploads";
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { parseEnv } from "@/lib/env";
 
@@ -28,11 +34,37 @@ function storage() {
   return cached;
 }
 
-/** Randomized key, namespaced by owner and purpose. Store it on the media row. */
-export function newObjectKey(userId: string, purpose: UploadPurpose): string {
-  return `users/${userId}/${purpose}/${randomUUID()}`;
+export const UPLOAD_URL_TTL_SECONDS = URL_TTL_SECONDS;
+
+/** The object key for an upload. `uploadId` is the random, unguessable part. */
+export function objectKeyFor(userId: string, purpose: UploadPurpose, uploadId: string): string {
+  return `users/${userId}/${purpose}/${uploadId}`;
 }
 
+/** Randomized key, namespaced by owner and purpose. Store it on the media row. */
+export function newObjectKey(userId: string, purpose: UploadPurpose): string {
+  return objectKeyFor(userId, purpose, randomUUID());
+}
+
+/** Size and type of a stored object, or null if it doesn't exist. */
+export async function headObject(key: string): Promise<{ byteSize: number; contentType: string | null } | null> {
+  const { client, bucket } = storage();
+  try {
+    const res = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
+    return { byteSize: res.ContentLength ?? 0, contentType: res.ContentType ?? null };
+  } catch (error) {
+    const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+    if (status === 404 || (error as Error).name === "NotFound") return null;
+    throw error;
+  }
+}
+
+export async function deleteObject(key: string): Promise<void> {
+  const { client, bucket } = storage();
+  await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
+}
+
+/** Short-lived PUT URL. The browser must send exactly this Content-Type header. */
 export async function presignUpload(key: string, contentType: string): Promise<string> {
   const { client, bucket } = storage();
   return getSignedUrl(client, new PutObjectCommand({ Bucket: bucket, Key: key, ContentType: contentType }), {

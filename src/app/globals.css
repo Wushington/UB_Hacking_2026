@@ -8,9 +8,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-geist-sans);
+  --font-heading: var(--font-inter);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -85,24 +85,25 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  /* Orbit palette (see the orbit-* tokens below) for shadcn components and Clerk's modals. */
+  --background: #0c0d27;
+  --foreground: #ecebff;
+  --card: #151632;
+  --card-foreground: #ecebff;
+  --popover: #151632;
+  --popover-foreground: #ecebff;
+  --primary: #ff5e7a;
+  --primary-foreground: #ffffff;
+  --secondary: #1d1e44;
+  --secondary-foreground: #ecebff;
+  --muted: #1d1e44;
+  --muted-foreground: #9a9cc7;
+  --accent: #1d1e44;
+  --accent-foreground: #ecebff;
+  --destructive: #ff5e7a;
+  --border: rgb(72 74 159 / 0.38);
+  --input: rgb(72 74 159 / 0.5);
+  --ring: #ff5e7a;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -127,5 +128,58 @@
   }
   html {
     @apply font-sans;
+  }
+}
+/* Orbit dark theme. Accent #ff5e7a matches the logo mark. */
+@theme {
+  --color-orbit-bg: #0c0d27;
+  --color-orbit-surface: #151632;
+  --color-orbit-raised: #1d1e44;
+  --color-orbit-sunken: #0a0b1e;
+  --color-orbit-chip: #2a2b5a;
+  --color-orbit-line: rgb(72 74 159 / 0.38);
+  --color-orbit-text: #ecebff;
+  --color-orbit-muted: #9a9cc7;
+  --color-orbit-accent: #ff5e7a;
+  --color-orbit-accent-hover: #ff7790;
+  --color-orbit-accent-text: #ff5e7a;
+  --color-orbit-accent-soft: #3a1a2c;
+  --color-orbit-success: #4ecba0;
+  --color-orbit-success-soft: #163d33;
+}
+
+/* Dashboard motion. Used only through `motion-safe:` so it switches off with "reduce motion". */
+@theme {
+  --animate-twinkle: twinkle 2s ease-in-out infinite alternate;
+  --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-mic-pulse: mic-pulse 2.4s ease-out infinite;
+  --animate-sound-bar: sound-bar 1.6s ease-in-out infinite alternate;
+
+  @keyframes twinkle {
+    from {
+      opacity: var(--twinkle-from);
+    }
+    to {
+      opacity: var(--twinkle-to);
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  @keyframes mic-pulse {
+    from {
+      box-shadow: 0 0 0 0 rgb(255 94 122 / 0.45);
+    }
+    to {
+      box-shadow: 0 0 0 14px rgb(255 94 122 / 0);
+    }
+  }
+  @keyframes sound-bar {
+    from {
+      transform: scaleY(0.55);
+    }
   }
 }
