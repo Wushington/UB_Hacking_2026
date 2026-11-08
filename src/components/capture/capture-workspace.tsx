@@ -1,11 +1,12 @@
 "use client";
 
-import { AudioLines, CloudUpload, ImageIcon, Lightbulb, Plus, ScanLine, Sparkles, X } from "lucide-react";
+import { AudioLines, CloudUpload, ImageIcon, Plus, ScanLine, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type DragEvent } from "react";
-import { NEW_SUBJECT, NO_SUBJECT, SubjectPicker, subjectChoice, type SubjectOption } from "@/components/subjects/subject-picker";
-import { orbitCardClass, orbitEyebrowClass, OrbitPageHeading, Pill, type PillTone } from "@/components/orbit/shell";
+import { NO_SUBJECT, SubjectPicker, subjectChoice, type SubjectOption } from "@/components/subjects/subject-picker";
+import { orbitCardClass, OrbitPageHeading, Pill, type PillTone } from "@/components/orbit/shell";
 import { cn } from "@/lib/utils";
+import { CaptureHelpButton } from "./capture-help";
 import {
   CaptureError,
   discardLecture,
@@ -26,12 +27,6 @@ const STATUS: Record<PhotoStatus, { label: string; tone: PillTone }> = {
   uploaded: { label: "Uploaded", tone: "success" },
   failed: { label: "Failed", tone: "danger" },
 };
-
-const AI_STEPS = [
-  { title: "Capture the important parts", body: "Read the board and pull out what matters." },
-  { title: "Put ideas in order", body: "Group key concepts, definitions and examples." },
-  { title: "Make it yours", body: "Review, edit and generate a quiz when ready." },
-];
 
 type Phase =
   | { kind: "idle" }
@@ -87,8 +82,6 @@ export function CaptureWorkspace({
 
   const working = phase.kind === "working" || phase.kind === "done";
   const locked = working; // editable again as soon as an attempt fails
-  const subjectName =
-    subjectValue === NEW_SUBJECT ? newSubject.trim() : subjects.find((c) => c.id === subjectValue)?.name ?? "";
 
   function addFiles(list: FileList | File[]) {
     const problems: string[] = [];
@@ -182,13 +175,13 @@ export function CaptureWorkspace({
         eyebrow="01 / CAPTURE YOUR NOTES"
         title="Good notes start here."
         subtitle="Bring a whiteboard photo or lecture audio. We’ll help you connect the dots."
-        aside={subjectName ? <Pill>{subjectName}</Pill> : null}
+        aside={<CaptureHelpButton />}
       />
 
-      <div className="grid w-full grid-cols-1 items-start gap-[22px] lg:grid-cols-[minmax(0,857fr)_minmax(0,448fr)] lg:gap-6">
-        <section aria-label="Add your class material" className={orbitCardClass}>
+      <div className="w-full">
+        <section aria-label="Add your material" className={orbitCardClass}>
           <div className="flex w-full flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[19px] leading-[1.5] font-medium sm:text-[21px]">Add your class material</h2>
+            <h2 className="text-[19px] leading-[1.5] font-medium sm:text-[21px]">Add your material</h2>
             {photos.length ? (
               <Pill tone="success">
                 {photos.length} {photos.length === 1 ? "source" : "sources"} ready
@@ -303,7 +296,7 @@ export function CaptureWorkspace({
           <div className="h-px w-full bg-[#333564]" />
 
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div className="w-full sm:max-w-[310px]">
+            <div className="w-full sm:max-w-[440px]">
               <SubjectPicker
                 label="Assign to subject"
                 subjects={subjects}
@@ -349,39 +342,6 @@ export function CaptureWorkspace({
             ) : null}
           </div>
         </section>
-
-        <div className="flex w-full min-w-0 flex-col gap-[22px]">
-          <section aria-label="How it works" className={orbitCardClass}>
-            <p className={orbitEyebrowClass}>A LITTLE HELP FROM AI</p>
-            <h2 className="text-[24px] leading-[1.3] font-medium tracking-[-0.5px] sm:text-[26px]">
-              Less transcribing. More understanding.
-            </h2>
-            <p className="text-[14px] leading-[1.6] text-[#9496bf]">
-              Your sources become one clear set of notes, saved right where they belong.
-            </p>
-            <ol className="flex flex-col gap-4">
-              {AI_STEPS.map((step, i) => (
-                <li key={step.title} className="flex gap-3.5">
-                  <span className="text-[12px] leading-[1.6] text-[#ff5e7a]">{String(i + 1).padStart(2, "0")}</span>
-                  <div className="flex flex-col gap-1">
-                    <p className="text-[14px] text-white">{step.title}</p>
-                    <p className="text-[12px] text-[#9496bf]">{step.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </section>
-
-          <section aria-label="Tip" className="flex flex-col gap-3 rounded-[18px] bg-[#0b0c22] p-5 sm:rounded-[22px] sm:p-7">
-            <div className="flex items-center gap-2.5">
-              <Lightbulb aria-hidden className="size-[18px] text-[#ff5e7a]" strokeWidth={1.75} />
-              <h2 className="text-[15px] font-medium">A clearer source, a better start</h2>
-            </div>
-            <p className="text-[13px] leading-[1.6] text-[#c1bedf]">
-              Keep the whole board in frame, avoid glare, and add photos in the order the lecture went.
-            </p>
-          </section>
-        </div>
       </div>
     </>
   );
