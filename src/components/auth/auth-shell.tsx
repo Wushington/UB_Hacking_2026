@@ -11,8 +11,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="orbit-auth">
       <header className="orbit-nav">
-        <Link href="/home" className="orbit-brand"><DesignIcon name="orbit" />Orbit Study</Link>
-        <Link href="/home" className="orbit-home"><DesignIcon name="arrow-left" />Back to home</Link>
+        <Link href="/" className="orbit-brand"><DesignIcon name="orbit" />Orbit Study</Link>
+        <Link href="/" className="orbit-home"><DesignIcon name="arrow-left" />Back to home</Link>
       </header>
       <div className="orbit-content">
         {children}

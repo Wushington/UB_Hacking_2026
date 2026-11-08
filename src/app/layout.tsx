@@ -3,8 +3,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
-import { Suspense } from "react";
-import { AppHeader } from "@/components/layout/app-header";
+import { SiteShell } from "@/components/layout/site-shell";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,24 +26,18 @@ export default function RootLayout({
   children,
 }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    // `dark` switches the shadcn tokens to the Orbit (Figma) palette in globals.css; without it every
+    // page falls back to the default white/black theme.
+    <html lang="en" className={`${inter.variable} ${geistMono.variable} dark h-full antialiased`}>
       <body className="flex min-h-full flex-col bg-background text-foreground">
         <ClerkProvider
           appearance={{ theme: shadcn }}
           signInUrl="/sign-in"
           signUpUrl="/sign-up"
-          signInFallbackRedirectUrl="/home"
-          signUpFallbackRedirectUrl="/home"
+          signInFallbackRedirectUrl="/"
+          signUpFallbackRedirectUrl="/"
         >
-          <Suspense fallback={null}>
-            <AppHeader />
-          </Suspense>
-          <main className="flex flex-1 flex-col">
-            {children}
-          </main>
+          <SiteShell>{children}</SiteShell>
         </ClerkProvider>
       </body>
     </html>

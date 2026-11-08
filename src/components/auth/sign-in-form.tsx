@@ -49,7 +49,7 @@ export function SignInForm({ recovery = false }: { recovery?: boolean }) {
     }
     const result = await signIn.finalize({
       navigate: ({ session, decorateUrl }) => {
-        window.location.assign(decorateUrl(session?.currentTask ? "/auth" : "/home"));
+        window.location.assign(decorateUrl(session?.currentTask ? "/auth" : "/"));
       },
     });
     if (result.error) throw result.error;
@@ -88,7 +88,7 @@ export function SignInForm({ recovery = false }: { recovery?: boolean }) {
   if (isSignedIn) return (
     <section className="orbit-panel">
       <div className="orbit-welcome"><h1>You’re signed in</h1><p>Your next big idea awaits.</p></div>
-      <Link className="orbit-text-link" href="/home">Continue to Orbit Study →</Link>
+      <Link className="orbit-text-link" href="/">Continue to Orbit Study →</Link>
     </section>
   );
 
@@ -102,7 +102,7 @@ export function SignInForm({ recovery = false }: { recovery?: boolean }) {
       <form className="orbit-form" action={submit} aria-busy={busy}>
         {!recovery && <>
           <Button type="button" className="orbit-google" disabled={disabled} onClick={() => run(async () => {
-            const result = await signIn.sso({ strategy: "oauth_google", redirectCallbackUrl: "/sso-callback", redirectUrl: "/home" });
+            const result = await signIn.sso({ strategy: "oauth_google", redirectCallbackUrl: "/sso-callback", redirectUrl: "/" });
             if (result.error) throw result.error;
           })}><strong aria-hidden="true">G</strong>Continue with Google</Button>
           <div className="orbit-divider">or sign in with email</div>
@@ -131,7 +131,7 @@ export function SignInForm({ recovery = false }: { recovery?: boolean }) {
         <Button type="submit" className="orbit-submit" disabled={disabled}>{busy ? "Please wait…" : recovery ? step === "email" ? "Send reset code" : step === "code" ? "Verify code" : "Reset password" : "Sign in"}<DesignIcon name="arrow-right" /></Button>
         {recovery && step === "code" && <Button type="button" className="orbit-google" disabled={disabled} onClick={() => run(async () => { const result = await signIn.resetPasswordEmailCode.sendCode(); if (result.error) throw result.error; })}>Resend code</Button>}
       </form>
-      <p className="orbit-create">{recovery ? <Link href="/">Back to sign in</Link> : <>New to Orbit Study? <Link href="/sign-up">Create an account</Link></>}</p>
+      <p className="orbit-create">{recovery ? <Link href="/sign-in">Back to sign in</Link> : <>New to Orbit Study? <Link href="/sign-up">Create an account</Link></>}</p>
     </section>
   );
 }

@@ -60,7 +60,7 @@ describe("custom Clerk authentication", () => {
   it("starts Google OAuth with the local callback", async () => {
     render(<SignInForm />);
     await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
-    expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_google", redirectCallbackUrl: "/sso-callback", redirectUrl: "/home" });
+    expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_google", redirectCallbackUrl: "/sso-callback", redirectUrl: "/" });
   });
   it("recovers a password through email code verification", async () => {
     render(<SignInForm recovery />); const user = userEvent.setup();
