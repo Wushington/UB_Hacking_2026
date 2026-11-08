@@ -1,5 +1,6 @@
 "use client";
 
+import { LoaderCircle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
@@ -46,7 +47,7 @@ const INTRO: Record<ExplainAloudState, { heading: string; body: string }> = {
   },
   processing: {
     heading: "Listening back to your explanation.",
-    body: "Your transcript and feedback will appear here once analysis finishes.",
+    body: "Hang tight. Your transcript and feedback are on their way.",
   },
   failed: {
     heading: "We couldn’t analyze that attempt.",
@@ -66,13 +67,13 @@ const INTRO: Record<ExplainAloudState, { heading: string; body: string }> = {
 const EMPTY_COPY: Record<"concept" | "transcript", Partial<Record<ExplainAloudState, string>> & { default: string }> = {
   concept: {
     "signed-out": "Sign in to see the concept you practiced.",
-    loading: "Loading…",
+    loading: "Loading your explanation…",
     default: "No explanation recorded yet. Pick a weak concept and explain it in your own words.",
   },
   transcript: {
     "signed-out": "Sign in to see your transcript.",
     loading: "Loading…",
-    processing: "Your transcript will appear here after your explanation is processed.",
+    processing: "Transcribing your explanation…",
     failed: "No transcript. This attempt couldn’t be processed.",
     default: "Your words will appear here after you record an explanation.",
   },
@@ -122,6 +123,32 @@ function Placeholder({ children, bordered = true }: { children: ReactNode; borde
     >
       {children}
     </p>
+  );
+}
+
+/** Dashed placeholder with a spinner: work is in progress (loading, transcribing). */
+function AnalyzingPlaceholder({ children }: { children: string }) {
+  return (
+    <div
+      role="status"
+      aria-label={children}
+      data-analyzing
+      className="flex w-full items-center justify-center gap-2.5 rounded-[12px] border border-dashed border-[#333564] px-5 py-6 text-center text-[13px] leading-[1.5] text-[#c1bedf]"
+    >
+      <LoaderCircle aria-hidden className="size-4 shrink-0 text-[#ff5e7a] motion-safe:animate-spin" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+/** Pulsing bars that hold a section's shape until its content arrives. */
+function SkeletonLines({ widths }: { widths: string[] }) {
+  return (
+    <div aria-hidden data-skeleton className="flex w-full flex-col gap-2.5">
+      {widths.map((width, i) => (
+        <div key={i} className="h-3 rounded-full bg-white/10 motion-safe:animate-pulse" style={{ width }} />
+      ))}
+    </div>
   );
 }
 
@@ -205,7 +232,16 @@ function RecordingPlayer({ recording }: { recording: NonNullable<ExplainAloudVie
 
 function FeedbackStatus({ state }: { state: ExplainAloudState }) {
   if (state === "ready") return <Pill tone="success">Analysis complete</Pill>;
-  if (state === "processing") return <Pill>Analyzing…</Pill>;
+  if (state === "processing") {
+    return (
+      <Pill>
+        <span className="inline-flex items-center gap-1.5">
+          <LoaderCircle aria-hidden className="size-3 motion-safe:animate-spin" />
+          Analyzing…
+        </span>
+      </Pill>
+    );
+  }
   if (state === "failed") return <Pill tone="danger">Analysis failed</Pill>;
   return null;
 }
@@ -213,6 +249,8 @@ function FeedbackStatus({ state }: { state: ExplainAloudState }) {
 export function ExplainAloudScreen({ view, lectures = [], className, backHref = "/weak-concepts" }: ExplainAloudScreenProps) {
   const { state, course, concept, recording, transcript, recordedLabel, feedback } = view;
   const intro = INTRO[state];
+  /** Content is on its way: the attempt is being analyzed, or the page is still loading. */
+  const pending = state === "processing" || state === "loading";
   const hasAttempt = concept !== null;
   const gaps = feedback?.gaps ?? [];
   const covered = feedback?.covered ?? [];
@@ -311,6 +349,8 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                   <div className="h-px w-full bg-[#333564]" />
                   <RecordingPlayer recording={recording} />
                 </>
+              ) : state === "loading" ? (
+                <AnalyzingPlaceholder>{copyFor("concept", state)}</AnalyzingPlaceholder>
               ) : (
                 <Placeholder>{copyFor("concept", state)}</Placeholder>
               )}
@@ -323,6 +363,8 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
               </div>
               {transcript ? (
                 <p className="w-full text-[15px] leading-[1.85] break-words text-[#c1bedf] sm:text-[17px]">“{transcript}”</p>
+              ) : pending ? (
+                <AnalyzingPlaceholder>{copyFor("transcript", state)}</AnalyzingPlaceholder>
               ) : (
                 <Placeholder>{copyFor("transcript", state)}</Placeholder>
               )}
@@ -355,6 +397,16 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                 <FeedbackStatus state={state} />
               </div>
             </div>
+            {pending ? (
+              <div role="status" className="flex w-full items-start gap-2.5 text-[14px] leading-[1.5] text-[#c1bedf]">
+                <LoaderCircle aria-hidden className="mt-[3px] size-4 shrink-0 text-[#ff5e7a] motion-safe:animate-spin" />
+                <p>
+                  {state === "loading"
+                    ? "Loading your feedback…"
+                    : "Comparing your explanation with your class notes. This usually takes 10–30 seconds."}
+                </p>
+              </div>
+            ) : null}
             {state === "processing" && view.recordingId ? <GradingWatcher recordingId={view.recordingId} /> : null}
             {feedback?.summary ? (
               <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{feedback.summary}</p>
@@ -373,6 +425,8 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                     </li>
                   ))}
                 </ul>
+              ) : pending ? (
+                <SkeletonLines widths={["88%", "72%", "80%"]} />
               ) : (
                 <Placeholder bordered={false}>
                   {feedback?.summary
@@ -394,6 +448,8 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                     <p className="text-[#c1bedf]">{gap.detail}</p>
                   </div>
                 ))
+              ) : pending ? (
+                <SkeletonLines widths={["45%", "92%", "64%"]} />
               ) : (
                 <Placeholder bordered={false}>
                   {feedback ? "No gaps found in this explanation. Nice work." : "Gaps in your explanation will show up here."}
@@ -405,6 +461,8 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
               <p className={eyebrowClass}>TRY THIS NEXT{feedback?.nextStep ? " · 45–60 SECONDS" : ""}</p>
               {feedback?.nextStep ? (
                 <p className="text-[14px] leading-[1.5] text-white">{feedback.nextStep}</p>
+              ) : pending ? (
+                <SkeletonLines widths={["95%", "58%"]} />
               ) : (
                 <Placeholder bordered={false}>A suggested next attempt will appear here.</Placeholder>
               )}
