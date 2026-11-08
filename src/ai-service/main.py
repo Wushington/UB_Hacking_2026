@@ -1,5 +1,5 @@
 """AI service. Run with:  uvicorn main:app --reload --port 8000
-Interactive docs for your teammates: http://localhost:8000/docs
+Interactive docs for teammates: http://localhost:8000/docs
 """
 from dotenv import load_dotenv
 

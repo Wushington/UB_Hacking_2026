@@ -8,7 +8,7 @@ from pydantic import BaseModel, ValidationError
 
 from schemas import FlashcardSet, NoteResult
 
-# Use the alias so you are not hardcoding a version that gets retired.
+# Use the alias to prevent hardcoding a version that gets retired.
 # To pin a specific model, set GEMINI_MODEL in .env (copy the ID from AI Studio).
 MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 
