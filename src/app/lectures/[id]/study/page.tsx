@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { z } from "zod";
 import { requireUserId, UnauthorizedError } from "@/lib/auth";
 import { loadLatestDeck } from "@/lib/flashcards/store";
+import { DeckStudy } from "./deck-study";
 import { FlashcardGenerator } from "./flashcard-generator";
 import { SAMPLE_DECK } from "./sample-deck";
 import { StudySessionView } from "./study-session";
@@ -31,12 +32,17 @@ async function StudyPage({ params }: PageProps<"/lectures/[id]/study">) {
       <div className="mx-auto w-full max-w-[1328px] px-4 pt-9 sm:px-14">
         <FlashcardGenerator lectureId={id} hasExistingDeck={deck !== null} />
       </div>
-      <StudySessionView
-        key={deck?.id ?? "no-deck"}
-        deckTitle={lectureTitle}
-        subtitle={deck ? `${cards.length} of ${deck.requestedCount} requested cards · generated ${deck.createdAt.toLocaleDateString("en-US")}` : "No deck yet"}
-        cards={cards}
-      />
+      {deck ? (
+        <DeckStudy
+          key={deck.id}
+          deckId={deck.id}
+          deckTitle={lectureTitle}
+          subtitle={`${cards.length} of ${deck.requestedCount} requested cards · generated ${deck.createdAt.toLocaleDateString("en-US")}`}
+          cards={cards}
+        />
+      ) : (
+        <StudySessionView deckTitle={lectureTitle} subtitle="No deck yet" cards={cards} />
+      )}
       {deck && (
         <div className="mx-auto w-full max-w-[1328px] px-4 pb-10 sm:px-14">
           <details className="rounded-[22px] bg-[#161730] p-6">

@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const LEARNING_LOOP: { label: string; matches?: (pathname: string) => boolean }[] = [
   { label: "Capture a class", matches: (p) => p === "/capture" },
   { label: "Organize notes", matches: (p) => /^\/lectures\/[^/]+$/.test(p) },
-  { label: "Take a quiz", matches: (p) => /^\/lectures\/[^/]+\/study$/.test(p) },
+  { label: "Take a quiz", matches: (p) => p.startsWith("/quizzes") || /^\/lectures\/[^/]+\/study$/.test(p) },
   { label: "Find the gaps", matches: (p) => p.startsWith("/weak-concepts") },
   { label: "Explain & improve", matches: (p) => p.startsWith("/explain") },
 ];
