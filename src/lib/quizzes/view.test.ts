@@ -2,14 +2,19 @@ import { describe, expect, it } from "vitest";
 import { toQuizRows } from "./view";
 
 const day = (d: number) => new Date(Date.UTC(2026, 10, d));
+const lecture = (id: string, title: string, d: number, categoryId: string | null) => ({
+  id,
+  title,
+  status: "ready" as const,
+  updatedAt: day(d),
+  categoryId,
+  categoryName: categoryId,
+});
 
 describe("toQuizRows", () => {
   it("lists every lecture with its latest deck and last completed score, newest lecture first", () => {
     const rows = toQuizRows(
-      [
-        { id: "l1", title: "Cells", updatedAt: day(1) },
-        { id: "l2", title: "Genetics", updatedAt: day(5) },
-      ],
+      [lecture("l1", "Cells", 1, "bio"), lecture("l2", "Genetics", 5, null)],
       [
         { id: "d-old", lectureId: "l1", createdAt: day(1), cardCount: 5 },
         { id: "d-new", lectureId: "l1", createdAt: day(3), cardCount: 8 },
@@ -21,8 +26,8 @@ describe("toQuizRows", () => {
       ],
     );
     expect(rows).toEqual([
-      { lectureId: "l2", title: "Genetics", cardCount: null, sessionCount: 0, lastScore: null },
-      { lectureId: "l1", title: "Cells", cardCount: 8, sessionCount: 2, lastScore: 75 },
+      { ...lecture("l2", "Genetics", 5, null), cardCount: null, sessionCount: 0, lastScore: null },
+      { ...lecture("l1", "Cells", 1, "bio"), cardCount: 8, sessionCount: 2, lastScore: 75 },
     ]);
   });
 });

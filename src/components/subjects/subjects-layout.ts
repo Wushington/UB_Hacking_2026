@@ -11,26 +11,26 @@ export type SubjectLecture = {
 
 export type SubjectInfo = { id: string; name: string; dividerId: string | null };
 
-export type SubjectGroup = { id: string; name: string; lectures: SubjectLecture[] };
+export type SubjectGroup<L extends SubjectLecture = SubjectLecture> = { id: string; name: string; lectures: L[] };
 
-export type SubjectsLayout = {
+export type SubjectsLayout<L extends SubjectLecture = SubjectLecture> = {
   /** Notes without a subject: the catch-all shown first. */
-  noSubject: SubjectLecture[];
+  noSubject: L[];
   /** Subjects not under any divider, shown above the dividers. */
-  ungrouped: SubjectGroup[];
-  dividers: { divider: Divider; subjects: SubjectGroup[] }[];
+  ungrouped: SubjectGroup<L>[];
+  dividers: { divider: Divider; subjects: SubjectGroup<L>[] }[];
 };
 
 const newest = (g: SubjectGroup) => g.lectures[0]?.updatedAt.getTime() ?? -Infinity;
 
 /**
- * Arranges My subjects. `lectures` must be newest first. Subjects are ordered by their newest notes;
+ * Arranges notes by divider and subject (My Subjects and Flashcards). `lectures` must be newest first. Subjects are ordered by their newest notes;
  * subjects with no notes yet come after, alphabetically. Dividers keep their saved order; a subject
  * whose divider no longer exists falls back above the dividers.
  */
-export function buildSubjectsLayout(lectures: SubjectLecture[], subjects: SubjectInfo[], dividers: Divider[]): SubjectsLayout {
-  const groups = new Map<string, SubjectGroup>(subjects.map((s) => [s.id, { id: s.id, name: s.name, lectures: [] }]));
-  const noSubject: SubjectLecture[] = [];
+export function buildSubjectsLayout<L extends SubjectLecture>(lectures: L[], subjects: SubjectInfo[], dividers: Divider[]): SubjectsLayout<L> {
+  const groups = new Map<string, SubjectGroup<L>>(subjects.map((s) => [s.id, { id: s.id, name: s.name, lectures: [] }]));
+  const noSubject: L[] = [];
   for (const lecture of lectures) {
     if (!lecture.categoryId) {
       noSubject.push(lecture);
@@ -44,7 +44,7 @@ export function buildSubjectsLayout(lectures: SubjectLecture[], subjects: Subjec
     group.lectures.push(lecture);
   }
 
-  const sort = (list: SubjectGroup[]) =>
+  const sort = (list: SubjectGroup<L>[]) =>
     list.sort((a, b) => newest(b) - newest(a) || a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   const ordered = [...dividers].sort((a, b) => a.position - b.position);
   const known = new Set(ordered.map((d) => d.id));

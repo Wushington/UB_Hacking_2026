@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { OrbitPage, OrbitPageHeading } from "@/components/orbit/shell";
 import { requireUserId, UnauthorizedError } from "@/lib/auth";
 import { listQuizzes } from "@/lib/quizzes/queries";
+import { listDividers, listSubjects } from "@/lib/subjects/store";
 import { QuizzesList } from "./quizzes-list";
 
 export const metadata: Metadata = {
@@ -17,7 +18,8 @@ async function Quizzes() {
     if (error instanceof UnauthorizedError) return <p className="text-muted-foreground">Sign in to see your flashcards.</p>;
     throw error;
   }
-  return <QuizzesList quizzes={await listQuizzes(userId)} />;
+  const [quizzes, subjects, dividers] = await Promise.all([listQuizzes(userId), listSubjects(userId), listDividers(userId)]);
+  return <QuizzesList quizzes={quizzes} subjects={subjects} dividers={dividers} />;
 }
 
 export default function Page() {
