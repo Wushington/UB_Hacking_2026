@@ -1,12 +1,12 @@
 "use client";
 
-import { AudioLines, CloudUpload, ImageIcon, Plus, ScanLine, Sparkles, X } from "lucide-react";
+import { AudioLines, CloudUpload, ImageIcon, Sparkles, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLayoutEffect, useRef, useState, type DragEvent } from "react";
 import { NO_SUBJECT, SubjectPicker, subjectChoice, type SubjectOption } from "@/components/subjects/subject-picker";
+import { HowItWorks } from "@/components/orbit/how-it-works";
 import { orbitCardClass, OrbitPageHeading, Pill, type PillTone } from "@/components/orbit/shell";
 import { cn } from "@/lib/utils";
-import { CaptureHelpButton } from "./capture-help";
 import {
   CaptureError,
   discardLecture,
@@ -20,6 +20,14 @@ import {
   type QueuedPhoto,
 } from "./capture-api";
 
+
+const HOW_IT_WORKS = {
+  steps: ["Add photos of your notes, in reading order.", "Choose a subject.", "Generate your notes, then review them against your photos."],
+  tip: {
+    title: "Photo Tips",
+    body: "Keep the whole board in frame and avoid glare. AI can make mistakes, so check your notes against your photos.",
+  },
+};
 
 const STATUS: Record<PhotoStatus, { label: string; tone: PillTone }> = {
   ready: { label: "Ready", tone: "success" },
@@ -172,19 +180,18 @@ export function CaptureWorkspace({
   return (
     <>
       <OrbitPageHeading
-        eyebrow="01 / CAPTURE YOUR NOTES"
-        title="Good notes start here."
-        subtitle="Bring photos of your handwritten notes or lecture audio. We’ll help you connect the dots."
-        aside={<CaptureHelpButton />}
+        title="Capture Notes"
+        subtitle="Upload whiteboard photos to create organized notes."
+        aside={<HowItWorks {...HOW_IT_WORKS} />}
       />
 
       <div className="w-full">
-        <section aria-label="Add your material" className={orbitCardClass}>
+        <section aria-labelledby="add-photos-heading" className={orbitCardClass}>
           <div className="flex w-full flex-wrap items-center justify-between gap-2">
-            <h2 className="text-[19px] leading-[1.5] font-medium sm:text-[21px]">Add your material</h2>
+            <h2 id="add-photos-heading" className="text-[19px] leading-[1.5] font-medium sm:text-[21px]">Add Photos</h2>
             {photos.length ? (
               <Pill tone="success">
-                {photos.length} {photos.length === 1 ? "source" : "sources"} ready
+                {photos.length} {photos.length === 1 ? "photo" : "photos"} ready
               </Pill>
             ) : null}
           </div>
@@ -202,33 +209,6 @@ export function CaptureWorkspace({
             }}
           />
 
-          <div className="grid w-full grid-cols-1 gap-3.5 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              disabled={locked || !signedIn}
-              className="group flex flex-col items-start gap-3 rounded-[14px] border border-[#333564] bg-[#1e1f45] p-5 text-left transition-colors hover:border-[#ff5e7a]/60 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[#333564]"
-            >
-              <span className="flex w-full items-start justify-between">
-                <ScanLine aria-hidden className="size-6 text-[#ff5e7a]" strokeWidth={1.75} />
-                <Plus aria-hidden className="size-4 text-[#9496bf] group-hover:text-white" />
-              </span>
-              <span className="text-[15px] font-medium text-white">Upload handwritten notes</span>
-              <span className="text-[12px] text-[#9496bf]">JPG, PNG or HEIC · up to 20 MB</span>
-            </button>
-            <div
-              aria-disabled
-              className="flex flex-col items-start gap-3 rounded-[14px] border border-[#333564] bg-[#1e1f45] p-5 opacity-60"
-            >
-              <span className="flex w-full items-start justify-between">
-                <AudioLines aria-hidden className="size-6 text-[#ff5e7a]" strokeWidth={1.75} />
-                <Pill>Coming soon</Pill>
-              </span>
-              <span className="text-[15px] font-medium text-white">Lecture audio</span>
-              <span className="text-[12px] text-[#9496bf]">MP3, M4A or WAV</span>
-            </div>
-          </div>
-
           <div
             onDragOver={(e) => {
               e.preventDefault();
@@ -237,23 +217,33 @@ export function CaptureWorkspace({
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
             className={cn(
-              "flex w-full flex-col items-center gap-2 rounded-[14px] border border-dashed px-5 py-7 text-center transition-colors",
+              "flex w-full flex-col items-center gap-3 rounded-[14px] border border-dashed px-5 py-8 text-center transition-colors",
               dragging ? "border-[#ff5e7a] bg-[#ff5e7a]/5" : "border-[#4a4c80]",
             )}
           >
             <CloudUpload aria-hidden className="size-6 text-[#ff5e7a]" strokeWidth={1.75} />
-            <p className="text-[14px] text-white">
-              Drop your files here, or{" "}
-              <button
-                type="button"
-                onClick={() => inputRef.current?.click()}
-                disabled={locked || !signedIn}
-                className="underline-offset-2 hover:underline disabled:no-underline"
-              >
-                browse files
-              </button>
-            </p>
-            <p className="text-[12px] text-[#9496bf]">Add up to {MAX_PHOTOS} photos of handwritten notes, in the order you want them read.</p>
+            <button
+              type="button"
+              onClick={() => inputRef.current?.click()}
+              disabled={locked || !signedIn}
+              className={cn(
+                "inline-flex h-[46px] items-center justify-center rounded-[10px] px-6 text-[14px] font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+                photos.length ? "border border-[#333564] bg-[#1e1f45] hover:bg-[#2a2b5a]" : "bg-[#ff5e7a] hover:bg-[#ff7891]",
+              )}
+            >
+              Upload Photos
+            </button>
+            <p className="text-[13px] text-white">or drop them here</p>
+            <p className="text-[12px] leading-[1.5] text-[#9496bf]">JPG, PNG or HEIC · up to 20 MB each · up to {MAX_PHOTOS} photos, in reading order</p>
+          </div>
+
+          <div aria-disabled className="flex items-center gap-3 rounded-[12px] bg-[#1e1f45]/60 px-4 py-3 text-[13px] text-[#c1bedf]">
+            <AudioLines aria-hidden className="size-[18px] shrink-0 text-[#9496bf]" strokeWidth={1.75} />
+            <span>Lecture Audio</span>
+            <span className="hidden text-[12px] text-[#9496bf] sm:inline">MP3, M4A or WAV</span>
+            <span className="ml-auto">
+              <Pill>Coming soon</Pill>
+            </span>
           </div>
 
           {notice ? (
@@ -313,17 +303,17 @@ export function CaptureWorkspace({
                 type="button"
                 onClick={organize}
                 disabled={!signedIn || !photos.length || working}
-                className="inline-flex h-[46px] items-center justify-center gap-2 rounded-[10px] bg-[#ff5e7a] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#ff7891] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#ff5e7a]"
+                className="inline-flex h-[46px] items-center justify-center gap-2 rounded-[10px] bg-[#ff5e7a] px-5 text-[14px] font-semibold text-white transition-colors hover:bg-[#ff7891] disabled:cursor-not-allowed disabled:bg-[#1e1f45] disabled:text-[#9496bf] disabled:hover:bg-[#1e1f45]"
               >
                 <Sparkles aria-hidden className="size-[18px]" />
-                {attempt ? "Try again" : "Organize notes"}
+                {attempt ? "Try Again" : "Generate Notes"}
               </button>
             </div>
           </div>
 
           <div aria-live="polite" className="min-h-0">
             {loading ? null : !signedIn ? (
-              <p className="text-[12px] text-[#9496bf]">Sign in (top right) to organize your notes.</p>
+              <p className="text-[12px] text-[#9496bf]">Sign in (top right) to generate notes.</p>
             ) : phase.kind === "working" ? (
               <p className="text-[13px] text-[#c1bedf]">{phase.message}</p>
             ) : phase.kind === "done" ? (

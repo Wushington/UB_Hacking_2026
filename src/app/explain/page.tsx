@@ -11,7 +11,7 @@ import {
 import { emptyView, readyToRecordView } from "@/lib/explain-aloud/view";
 
 export const metadata: Metadata = {
-  title: "Explain aloud · Orbit Study",
+  title: "Explain a Concept · Orbit Study",
 };
 
 const param = (value: string | string[] | undefined) => (typeof value === "string" ? value : undefined);

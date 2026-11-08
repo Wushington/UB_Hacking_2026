@@ -9,7 +9,12 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 /** One card per lecture, linking to its flashcard study page. Server-renderable: no client state. */
 export function QuizzesList({ quizzes }: { quizzes: QuizRow[] }) {
   if (quizzes.length === 0) {
-    return <p className="text-muted-foreground">No lectures yet. Save notes from a class, then generate flashcards to quiz yourself.</p>;
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-muted-foreground">No notes yet. Capture notes to generate flashcards.</p>
+        <Link href="/capture" className={buttonVariants({ size: "sm" })}>Capture Notes</Link>
+      </div>
+    );
   }
 
   return (
@@ -36,7 +41,7 @@ export function QuizzesList({ quizzes }: { quizzes: QuizRow[] }) {
                 href={`/lectures/${q.lectureId}/study`}
                 className={buttonVariants({ size: "sm", variant: q.cardCount === null ? "outline" : "default" })}
               >
-                {q.cardCount === null ? "Generate flashcards" : "Study flashcards"}
+                {q.cardCount === null ? "Generate Flashcards" : q.sessionCount === 0 ? "Start Studying" : "Continue Studying"}
               </Link>
             </CardContent>
           </Card>

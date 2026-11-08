@@ -129,6 +129,11 @@
   html {
     @apply font-sans;
   }
+  /* A visible keyboard focus ring on the dark background, everywhere. */
+  :focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+  }
   /* Tailwind v4 no longer gives buttons a pointer cursor: show it on everything clickable. */
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -164,8 +169,6 @@
 @theme {
   --animate-twinkle: twinkle 2s ease-in-out infinite alternate;
   --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-mic-pulse: mic-pulse 2.4s ease-out infinite;
-  --animate-sound-bar: sound-bar 1.6s ease-in-out infinite alternate;
 
   @keyframes twinkle {
     from {
@@ -179,19 +182,6 @@
     from {
       opacity: 0;
       transform: translateY(8px);
-    }
-  }
-  @keyframes mic-pulse {
-    from {
-      box-shadow: 0 0 0 0 rgb(255 94 122 / 0.45);
-    }
-    to {
-      box-shadow: 0 0 0 14px rgb(255 94 122 / 0);
-    }
-  }
-  @keyframes sound-bar {
-    from {
-      transform: scaleY(0.55);
     }
   }
 }

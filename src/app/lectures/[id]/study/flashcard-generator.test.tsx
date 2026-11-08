@@ -23,7 +23,7 @@ describe("flashcard generator", () => {
     expect(input).toHaveAttribute("min", "1");
     expect(input).toHaveAttribute("max", "50");
     expect(input).toHaveAttribute("step", "1");
-    expect(screen.getByRole("button", { name: "Generate flashcards" })).toHaveAttribute("type", "submit");
+    expect(screen.getByRole("button", { name: "Generate Flashcards" })).toHaveAttribute("type", "submit");
   });
 
   it.each(["", "2.5", "0", "51"])("rejects invalid count %j without fetching", async (value) => {
@@ -32,7 +32,7 @@ describe("flashcard generator", () => {
     const input = screen.getByRole("spinbutton", { name: "Number of flashcards" });
     await user.clear(input);
     if (value) await user.type(input, value);
-    await user.click(screen.getByRole("button", { name: "Generate flashcards" }));
+    await user.click(screen.getByRole("button", { name: "Generate Flashcards" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Enter a whole number from 1 to 50.");
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -45,14 +45,14 @@ describe("flashcard generator", () => {
     const input = screen.getByRole("spinbutton", { name: "Number of flashcards" });
     await user.clear(input);
     await user.type(input, "7");
-    await user.dblClick(screen.getByRole("button", { name: "Generate flashcards" }));
+    await user.dblClick(screen.getByRole("button", { name: "Generate Flashcards" }));
     expect(screen.getByRole("button", { name: "Generating…" })).toBeDisabled();
     fireEvent.submit(input.closest("form")!);
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith("/api/lectures/lecture-123/flashcards", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: '{"count":7}',
     });
     await act(async () => resolve(Response.json({ deckId: "deck-1", requestedCount: 7, actualCount: 7, shortfall: null }, { status: 201 })));
-    expect(screen.getByRole("button", { name: "Generate flashcards" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Generate Flashcards" })).toBeEnabled();
   });
 
   it.each([
@@ -63,7 +63,7 @@ describe("flashcard generator", () => {
     const user = userEvent.setup();
     fetchMock.mockResolvedValue(Response.json({ deckId: "deck-1", requestedCount: 10, actualCount, shortfall }, { status: 201 }));
     render(<FlashcardGenerator {...props} />);
-    await user.click(screen.getByRole("button", { name: "Generate flashcards" }));
+    await user.click(screen.getByRole("button", { name: "Generate Flashcards" }));
     const message = await screen.findByText(`Generated ${wording} from your notes.`);
     expect(message.closest('[aria-live="polite"]')).not.toBeNull();
     if (shortfall) expect(screen.getByText(shortfall)).toBeInTheDocument();
@@ -81,13 +81,13 @@ describe("flashcard generator", () => {
     const user = userEvent.setup();
     fetchMock.mockImplementation(response);
     render(<FlashcardGenerator {...props} hasExistingDeck />);
-    await user.click(screen.getByRole("button", { name: "Generate a new deck" }));
+    await user.click(screen.getByRole("button", { name: "Generate a New Deck" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(screen.getByText("Your existing deck was kept.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Generate a new deck" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Generate a New Deck" })).toBeEnabled();
     expect(refresh).not.toHaveBeenCalled();
     fetchMock.mockResolvedValue(Response.json({ deckId: "deck-2", requestedCount: 10, actualCount: 10, shortfall: null }, { status: 201 }));
-    await user.click(screen.getByRole("button", { name: "Generate a new deck" }));
+    await user.click(screen.getByRole("button", { name: "Generate a New Deck" }));
     expect(await screen.findByText("Generated 10 flashcards from your notes.")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByText("Your existing deck was kept.")).not.toBeInTheDocument();
@@ -98,7 +98,7 @@ describe("flashcard generator", () => {
     const user = userEvent.setup();
     fetchMock.mockRejectedValue(new Error("Offline"));
     render(<FlashcardGenerator {...props} />);
-    await user.click(screen.getByRole("button", { name: "Generate flashcards" }));
+    await user.click(screen.getByRole("button", { name: "Generate Flashcards" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't generate flashcards. Please try again.");
     expect(screen.queryByText("Your existing deck was kept.")).not.toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();

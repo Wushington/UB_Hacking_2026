@@ -7,7 +7,7 @@ import { listLectures } from "@/lib/lectures/store";
 import { listDividers, listSubjects } from "@/lib/subjects/store";
 
 export const metadata: Metadata = {
-  title: "My subjects · Orbit Study",
+  title: "My Subjects · Orbit Study",
 };
 
 /** Reads the session, the user's notes, subjects and dividers at request time; streamed in behind the heading. */
@@ -22,7 +22,7 @@ async function SubjectsContent() {
 export default function SubjectsPage() {
   return (
     <OrbitPage>
-      <Suspense fallback={<OrbitPageHeading eyebrow="MY SUBJECTS" title="Loading your subjects…" />}>
+      <Suspense fallback={<OrbitPageHeading title="My Subjects" subtitle="Loading your subjects…" />}>
         <SubjectsContent />
       </Suspense>
     </OrbitPage>

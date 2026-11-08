@@ -38,22 +38,19 @@ export function OrbitPage({ children, className }: { children: ReactNode; classN
   );
 }
 
-/** Page title block: eyebrow, heading, subtitle, optional pill on the right. */
+/** Page title block: heading, subtitle, optional actions on the right. */
 export function OrbitPageHeading({
-  eyebrow,
   title,
   subtitle,
   aside,
 }: {
-  eyebrow: string;
   title: ReactNode;
   subtitle?: ReactNode;
   aside?: ReactNode;
 }) {
   return (
     <div className="flex w-full flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
-      <div className="flex min-w-0 flex-col gap-2">
-        <p className={orbitEyebrowClass}>{eyebrow}</p>
+      <div className="flex min-w-0 flex-col gap-1.5">
         <h1 className="text-[28px] leading-[1.15] font-medium tracking-[-1.3px] text-balance sm:text-[32px] lg:text-[36px]">
           {title}
         </h1>

@@ -37,11 +37,16 @@ describe("SiteShell", () => {
   );
 
   it("wraps every page in one navbar, main region, footer and starry background", () => {
-    const { container } = renderShell("/");
+    const { container } = renderShell("/capture");
     expect(screen.getAllByRole("banner")).toHaveLength(1);
     expect(within(screen.getByRole("main")).getByText("Page content")).toBeInTheDocument();
     expect(screen.getAllByRole("contentinfo")).toHaveLength(1);
     expect(container.querySelectorAll("[data-star]")).toHaveLength(66);
+  });
+
+  it("leaves the workflow to the dashboard on the home page", () => {
+    renderShell("/");
+    expect(screen.queryByRole("contentinfo")).toBeNull();
   });
 
   it("shows the logo linking home", () => {
@@ -53,13 +58,13 @@ describe("SiteShell", () => {
 
   it.each([
     ["/", "Home"],
-    ["/weak-concepts", "Weak concepts"],
-    ["/explain", "Weak concepts"],
-    ["/subjects", "My subjects"],
-    ["/capture", "My subjects"],
-    ["/lectures/abc", "My subjects"],
-    ["/quizzes", "Quizzes"],
-    ["/lectures/abc/study", "Quizzes"],
+    ["/weak-concepts", "Weak Concepts"],
+    ["/explain", "Weak Concepts"],
+    ["/subjects", "My Subjects"],
+    ["/capture", "Capture Notes"],
+    ["/lectures/abc", "My Subjects"],
+    ["/quizzes", "Flashcards"],
+    ["/lectures/abc/study", "Flashcards"],
   ])("marks the current section on %s", (pathname, label) => {
     renderShell(pathname);
     const main = screen.getByRole("navigation", { name: "Main" });
@@ -70,8 +75,8 @@ describe("SiteShell", () => {
   it("labels unbuilt sections and controls as coming soon instead of linking nowhere", () => {
     renderShell("/");
     const main = screen.getByRole("navigation", { name: "Main" });
-    expect(within(main).getByRole("link", { name: "My subjects" })).toHaveAttribute("href", "/subjects");
-    expect(within(main).getByRole("link", { name: "Quizzes" })).toHaveAttribute("href", "/quizzes");
+    expect(within(main).getByRole("link", { name: "My Subjects" })).toHaveAttribute("href", "/subjects");
+    expect(within(main).getByRole("link", { name: "Flashcards" })).toHaveAttribute("href", "/quizzes");
     for (const name of [/search/i, /notifications/i]) {
       const control = screen.getByRole("button", { name });
       expect(control).toBeDisabled();
@@ -86,44 +91,52 @@ describe("SiteShell", () => {
     expect(screen.getByRole("banner")).toHaveClass("relative", "z-40");
   });
 
-  it("links Weak concepts to the weak concepts list", () => {
+  it("links Weak Concepts to the weak concepts list", () => {
     renderShell("/");
     const main = screen.getByRole("navigation", { name: "Main" });
-    expect(within(main).getByRole("link", { name: "Weak concepts" })).toHaveAttribute("href", "/weak-concepts");
+    expect(within(main).getByRole("link", { name: "Weak Concepts" })).toHaveAttribute("href", "/weak-concepts");
   });
 
-  it("links Quizzes to the flashcard decks page", () => {
+  it("links Flashcards to the flashcard decks page", () => {
     renderShell("/");
     const main = screen.getByRole("navigation", { name: "Main" });
-    expect(within(main).getByRole("link", { name: "Quizzes" })).toHaveAttribute("href", "/quizzes");
+    expect(within(main).getByRole("link", { name: "Flashcards" })).toHaveAttribute("href", "/quizzes");
   });
 
-  it.each(["/quizzes", "/lectures/abc/study"])("highlights Take a quiz in the footer on %s", (pathname) => {
-    renderShell(pathname);
-    const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: /learning loop/i });
-    expect(within(loop).getByText("Take a quiz", { exact: false }).closest("li")).toHaveAttribute("aria-current", "step");
+  it("links Capture Notes in the main navigation", () => {
+    renderShell("/");
+    const main = screen.getByRole("navigation", { name: "Main" });
+    expect(within(main).getByRole("link", { name: "Capture Notes" })).toHaveAttribute("href", "/capture");
   });
 
-  it("shows the learning loop in the footer and highlights the current step", () => {
+  it("never calls flashcards quizzes in the navigation or footer", () => {
+    renderShell("/quizzes");
+    expect(screen.getByRole("banner").textContent).not.toMatch(/quiz/i);
+    expect(screen.getByRole("contentinfo").textContent).not.toMatch(/quiz/i);
+  });
+
+  it("shows the study workflow in the footer and highlights the current step", () => {
     renderShell("/explain");
-    const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: /learning loop/i });
+    const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: "Study workflow" });
     expect(within(loop).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "01  /  Capture your notes→",
-      "02  /  Organize notes→",
-      "03  /  Take a quiz→",
-      "04  /  Find the gaps→",
-      "05  /  Explain & improve",
+      "1. Upload Notes→",
+      "2. Generate Flashcards→",
+      "3. Study→",
+      "4. Review Weak Concepts",
     ]);
-    expect(within(loop).getByText("Explain & improve", { exact: false }).closest("li")).toHaveAttribute("aria-current", "step");
+    expect(within(loop).getByText("Review Weak Concepts", { exact: false }).closest("li")).toHaveAttribute("aria-current", "step");
+    expect(screen.getByRole("contentinfo").textContent).not.toMatch(/it all connects/i);
   });
 
   it.each([
-    ["/capture", "Capture your notes"],
-    ["/lectures/abc", "Organize notes"],
-    ["/lectures/abc/study", "Take a quiz"],
-  ])("highlights the learning-loop step for %s", (pathname, step) => {
+    ["/capture", "Upload Notes"],
+    ["/lectures/abc", "Generate Flashcards"],
+    ["/quizzes", "Study"],
+    ["/lectures/abc/study", "Study"],
+    ["/weak-concepts", "Review Weak Concepts"],
+  ])("highlights the workflow step for %s", (pathname, step) => {
     renderShell(pathname);
-    const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: /learning loop/i });
+    const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: "Study workflow" });
     const current = within(loop).getAllByRole("listitem").filter((li) => li.getAttribute("aria-current") === "step");
     expect(current.map((li) => li.textContent)).toEqual([expect.stringContaining(step)]);
   });

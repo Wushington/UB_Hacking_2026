@@ -87,7 +87,7 @@ export function SignInForm({ recovery = false }: { recovery?: boolean }) {
 
   if (isSignedIn) return (
     <section className="orbit-panel">
-      <div className="orbit-welcome"><h1>You’re signed in</h1><p>Your next big idea awaits.</p></div>
+      <div className="orbit-welcome"><h1>You’re signed in</h1></div>
       <Link className="orbit-text-link" href="/">Continue to Orbit Study →</Link>
     </section>
   );
@@ -95,9 +95,8 @@ export function SignInForm({ recovery = false }: { recovery?: boolean }) {
   return (
     <section className="orbit-panel" aria-labelledby="sign-in-heading">
       <div className="orbit-welcome">
-        <p className="orbit-eyebrow"><DesignIcon name="sparkles" />YOUR AI STUDY COMPANION</p>
         <h1 id="sign-in-heading">{recovery ? "Reset your password" : "Welcome back"}</h1>
-        <p>{recovery ? step === "email" ? "We’ll email you a code to get back into your orbit." : step === "code" ? "Enter the reset code sent to your email." : "Choose a new password for your account." : "A little focus. A whole universe of possibility."}</p>
+        <p>{recovery ? step === "email" ? "We’ll email you a code to reset your password." : step === "code" ? "Enter the reset code sent to your email." : "Choose a new password for your account." : "Sign in to your notes and flashcards."}</p>
       </div>
       <form className="orbit-form" action={submit} aria-busy={busy}>
         {!recovery && <>

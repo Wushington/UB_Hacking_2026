@@ -16,8 +16,8 @@ const unsaved = "Sample sessions aren't saved. Sign in and open one of your deck
 
 async function finish(user: ReturnType<typeof userEvent.setup>, total = 3) {
   for (let i = 0; i < total; i++) {
-    await user.click(screen.getByRole("button", { name: "Reveal answer" }));
-    await user.click(screen.getByRole("button", { name: i === 1 ? "Missed" : "Got it" }));
+    await user.click(screen.getByRole("button", { name: "Reveal Answer" }));
+    await user.click(screen.getByRole("button", { name: i === 1 ? "Missed" : "Got It" }));
   }
 }
 
@@ -27,7 +27,7 @@ describe("study session view", () => {
     expect(screen.getByRole("heading", { level: 2, name: "Question 1?" })).toBeInTheDocument();
     expect(screen.queryByText("Question 2?")).not.toBeInTheDocument();
     expect(screen.queryByText("Answer 1.")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Got it" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Got It" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Missed" })).toBeDisabled();
     expect(screen.getByText("Sample deck")).toBeInTheDocument();
   });
@@ -35,24 +35,55 @@ describe("study session view", () => {
   it("reveals, enables grading, advances and hides the next answer", async () => {
     const user = userEvent.setup();
     render(<StudySessionView {...props} />);
-    await user.click(screen.getByRole("button", { name: "Reveal answer" }));
+    await user.click(screen.getByRole("button", { name: "Reveal Answer" }));
     expect(screen.getByText("Answer 1.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Reveal answer" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Reveal Answer" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Missed" })).toBeEnabled();
-    await user.click(screen.getByRole("button", { name: "Got it" }));
+    await user.click(screen.getByRole("button", { name: "Got It" }));
     expect(screen.getByText("Question 2?")).toBeInTheDocument();
     expect(screen.getByText("1 graded")).toBeInTheDocument();
     expect(screen.queryByText("Answer 2.")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Got it" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Got It" })).toBeDisabled();
   });
 
   it("records one result on a double click without skipping a card", async () => {
     const user = userEvent.setup();
     render(<StudySessionView {...props} />);
-    await user.click(screen.getByRole("button", { name: "Reveal answer" }));
-    await user.dblClick(screen.getByRole("button", { name: "Got it" }));
+    await user.click(screen.getByRole("button", { name: "Reveal Answer" }));
+    await user.dblClick(screen.getByRole("button", { name: "Got It" }));
     expect(screen.getByText("1 graded")).toBeInTheDocument();
     expect(screen.getByText("Question 2?")).toBeInTheDocument();
+  });
+
+  it("uses functional headings and offers help while studying", () => {
+    const { container } = render(<StudySessionView {...props} />);
+    expect(screen.getByRole("heading", { level: 1, name: "Study Flashcards" })).toBeInTheDocument();
+    expect(screen.getByText("Test deck · Biology")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "How It Works" })).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/sticking|no pressure|a missed card is useful|quiz/i);
+  });
+
+  it("titles the finished screen Study Results without decorative copy or help", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<StudySessionView {...props} />);
+    await finish(user);
+    expect(screen.getByRole("heading", { level: 1, name: "Study Results" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "How It Works" })).toBeNull();
+    expect(container.textContent).not.toMatch(/a little clearer|a closer look/i);
+  });
+
+  it("points to Weak Concepts after saving a session with missed cards", async () => {
+    const user = userEvent.setup();
+    render(<StudySessionView {...props} isSample={false} onComplete={vi.fn().mockResolvedValue(undefined)} />);
+    await finish(user);
+    expect(screen.getByRole("link", { name: "Review Weak Concepts" })).toHaveAttribute("href", "/weak-concepts");
+  });
+
+  it("doesn't point to Weak Concepts from a sample deck, which saves nothing", async () => {
+    const user = userEvent.setup();
+    render(<StudySessionView {...props} />);
+    await finish(user);
+    expect(screen.queryByRole("link", { name: "Review Weak Concepts" })).toBeNull();
   });
 
   it("shows counts, rounded score and ordered per-card review without claiming a save", async () => {
@@ -79,7 +110,7 @@ describe("study session view", () => {
     render(<StudySessionView {...props} random={random} />);
     await finish(user);
     random.mockReturnValue(0);
-    await user.click(screen.getByRole("button", { name: "Study again" }));
+    await user.click(screen.getByRole("button", { name: "Study Again" }));
     expect(screen.getByText("Card 1 of 3")).toBeInTheDocument();
     expect(screen.getByText("0 graded")).toBeInTheDocument();
     expect(screen.getByText("Question 2?")).toBeInTheDocument();
@@ -108,7 +139,7 @@ describe("study session view", () => {
     expect(completeSessionSchema.parse(payload)).toEqual({ results: cards.map((card, i) => ({ flashcardId: card.id, result: i === 1 ? "missed" : "got_it" })) });
     await act(async () => resolve());
     expect(screen.getByText("Saved", { exact: true })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Study again" }));
+    await user.click(screen.getByRole("button", { name: "Study Again" }));
     await finish(user);
     expect(onComplete).toHaveBeenCalledTimes(2);
     await act(async () => resolve());
@@ -120,7 +151,7 @@ describe("study session view", () => {
     render(<StudySessionView {...props} onComplete={onComplete} />);
     await finish(user);
     expect(await screen.findByText("Couldn't save this session. Please try again.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await user.click(screen.getByRole("button", { name: "Try Again" }));
     expect(await screen.findByText("Saved", { exact: true })).toBeInTheDocument();
     expect(onComplete).toHaveBeenCalledTimes(2);
     expect(onComplete.mock.calls[1][0]).toEqual(onComplete.mock.calls[0][0]);
@@ -132,7 +163,7 @@ describe("study session view", () => {
     const onComplete = vi.fn<SaveStudyResults>(() => new Promise<void>((_, fail) => { reject = fail; }));
     render(<StudySessionView {...props} onComplete={onComplete} />);
     await finish(user);
-    await user.click(screen.getByRole("button", { name: "Study again" }));
+    await user.click(screen.getByRole("button", { name: "Study Again" }));
     await act(async () => reject(new Error("Old request")));
     expect(screen.getByText("0 graded")).toBeInTheDocument();
     expect(screen.queryByText("Couldn't save this session. Please try again.")).not.toBeInTheDocument();

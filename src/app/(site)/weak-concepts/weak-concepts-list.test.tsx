@@ -20,6 +20,17 @@ describe("Weak concepts list", () => {
     expect(screen.getByText(/No weak concepts yet/)).toBeInTheDocument();
   });
 
+  it("gives the empty state a next step", () => {
+    render(<WeakConceptsList concepts={[]} />);
+    expect(screen.getByRole("link", { name: "Study Flashcards" })).toHaveAttribute("href", "/quizzes");
+  });
+
+  it("gives each concept one primary action", () => {
+    render(<WeakConceptsList concepts={[base]} />);
+    const solid = screen.getAllByRole("link").filter((a) => a.className.includes("bg-primary"));
+    expect(solid.map((a) => a.textContent)).toEqual(["Study Flashcards"]);
+  });
+
   it("shows the lecture, where it was identified and a link to study the missed flashcards", async () => {
     render(<WeakConceptsList concepts={[base]} />);
     const [item] = screen.getAllByRole("listitem");
@@ -27,7 +38,7 @@ describe("Weak concepts list", () => {
     expect(within(item).getByText("Cellular respiration")).toBeInTheDocument();
     expect(within(item).getByText("Missed 2 flashcards")).toBeInTheDocument();
     expect(within(item).queryByText(/explanation recording/)).not.toBeInTheDocument();
-    expect(within(item).getByRole("link", { name: "Study flashcards" })).toHaveAttribute("href", `/lectures/${LECTURE}/study`);
+    expect(within(item).getByRole("link", { name: "Study Flashcards" })).toHaveAttribute("href", `/lectures/${LECTURE}/study`);
 
     await userEvent.setup().click(within(item).getByText("Review 1 missed card"));
     expect(within(item).getByText("Where does glycolysis take place?")).toBeVisible();
@@ -38,16 +49,16 @@ describe("Weak concepts list", () => {
     render(<WeakConceptsList concepts={[recordingOnly]} />);
     const [item] = screen.getAllByRole("listitem");
     expect(within(item).getByText("Weak point in 1 explanation recording")).toBeInTheDocument();
-    expect(within(item).getByRole("link", { name: "View explanation feedback" })).toHaveAttribute("href", `/explain?recording=${RECORDING}`);
-    expect(within(item).getByRole("link", { name: "Review notes" })).toHaveAttribute("href", `/lectures/${LECTURE}`);
-    expect(within(item).queryByRole("link", { name: "Study flashcards" })).not.toBeInTheDocument();
+    expect(within(item).getByRole("link", { name: "View Feedback" })).toHaveAttribute("href", `/explain?recording=${RECORDING}`);
+    expect(within(item).getByRole("link", { name: "View Notes" })).toHaveAttribute("href", `/lectures/${LECTURE}`);
+    expect(within(item).queryByRole("link", { name: "Study Flashcards" })).not.toBeInTheDocument();
     expect(within(item).queryByText(/missed card/)).not.toBeInTheDocument();
   });
 
   it("lets the student pick any weak concept to explain out loud", () => {
     render(<WeakConceptsList concepts={[base, recordingOnly]} />);
     // Every concept (flashcard-based or recording-only) gets its own link, in list order.
-    expect(screen.getAllByRole("link", { name: "Explain it out loud" }).map((a) => a.getAttribute("href"))).toEqual([
+    expect(screen.getAllByRole("link", { name: "Record Explanation" }).map((a) => a.getAttribute("href"))).toEqual([
       `/explain?concept=${base.id}`,
       `/explain?concept=${recordingOnly.id}`,
     ]);

@@ -206,11 +206,10 @@ export function SubjectsScreen({
   return (
     <>
       <OrbitPageHeading
-        eyebrow="MY SUBJECTS"
-        title="Everything you’ve captured."
+        title="My Subjects"
         subtitle={
           signedIn
-            ? "Open a set of notes to read it, change its subject, or turn it into flashcards. Group subjects with dividers."
+            ? "Open notes or generate flashcards. Use dividers to group subjects."
             : "Sign in to see your subjects."
         }
         aside={
@@ -218,11 +217,11 @@ export function SubjectsScreen({
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" onClick={() => setAdding(true)} disabled={adding} className={cn(secondaryButton, "disabled:opacity-50")}>
                 <SeparatorHorizontal aria-hidden className="size-[18px]" />
-                Add divider
+                Add Divider
               </button>
               <Link href="/capture" className={captureButton}>
                 <Plus aria-hidden className="size-[18px]" />
-                Capture notes
+                Capture Notes
               </Link>
             </div>
           ) : null

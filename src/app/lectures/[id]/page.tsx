@@ -9,10 +9,11 @@ import { NotesActions } from "@/components/notes/notes-actions";
 import { NotesView } from "@/components/notes/notes-view";
 import { NotesWithPhotos } from "@/components/notes/photo-viewer";
 import { orbitCardClass, OrbitPage, OrbitPageHeading, Pill } from "@/components/orbit/shell";
+import { loadLatestDeck } from "@/lib/flashcards/store";
 import { listCategories, listLecturePhotos, loadLectureForPage } from "@/lib/lectures/store";
 
 export const metadata: Metadata = {
-  title: "Your notes · Orbit Study",
+  title: "Notes · Orbit Study",
 };
 
 const linkButtonClass =
@@ -29,7 +30,7 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
 
 const captureLink = (
   <Link href="/capture" className={`${linkButtonClass} self-start bg-[#ff5e7a] text-white hover:bg-[#ff7891]`}>
-    Capture notes
+    Capture Notes
   </Link>
 );
 
@@ -39,9 +40,9 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
   if (!z.uuid().safeParse(id).success) notFound();
 
   const { userId } = await auth();
-  const [lecture, subjects, photos] = userId
-    ? await Promise.all([loadLectureForPage(userId, id), listCategories(userId), listLecturePhotos(userId, id)])
-    : [null, [], []];
+  const [lecture, subjects, photos, deckData] = userId
+    ? await Promise.all([loadLectureForPage(userId, id), listCategories(userId), listLecturePhotos(userId, id), loadLatestDeck(userId, id)])
+    : [null, [], [], null];
   if (userId && !lecture) notFound();
 
   let body: ReactNode;
@@ -75,24 +76,23 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
   return (
     <>
       <OrbitPageHeading
-        eyebrow="02 / ORGANIZE NOTES"
-        title={lecture?.status === "ready" ? lecture.title : "Your notes"}
+        title={lecture?.status === "ready" ? lecture.title : "Notes"}
         subtitle={
           lecture?.status === "ready"
-            ? "Organized from your photos. Tap a “Photo” tag to compare a note with what you wrote."
+            ? "AI-generated from your photos. Select a Photo tag to check a note against the original."
             : undefined
         }
         aside={
           lecture ? (
             <div className="flex flex-wrap items-center gap-2">
-              {lecture.status === "ready" && <ExportNotesPdf title={lecture.title} subject={lecture.categoryName} />}
               {lecture.categoryName ? <Pill>{lecture.categoryName}</Pill> : null}
+              {lecture.status === "ready" && <ExportNotesPdf title={lecture.title} subject={lecture.categoryName} />}
               {lecture.status === "ready" ? (
                 <Link
                   href={`/lectures/${lecture.id}/study`}
-                  className={`${linkButtonClass} border border-[#ff5e7a] text-[#ff5e7a] hover:bg-[#ff5e7a] hover:text-white`}
+                  className={`${linkButtonClass} bg-[#ff5e7a] text-white hover:bg-[#ff7891]`}
                 >
-                  Make flashcards →
+                  {deckData?.deck ? "Study Flashcards" : "Generate Flashcards"}
                 </Link>
               ) : null}
             </div>
@@ -112,11 +112,11 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
   );
 }
 
-/** Step 02: read the notes generated from photos of handwritten notes, move them to another subject, or delete them. */
+/** Read the notes generated from photos of handwritten notes, move them to another subject, or delete them. */
 export default function LectureNotesPage({ params }: PageProps<"/lectures/[id]">) {
   return (
     <OrbitPage>
-      <Suspense fallback={<OrbitPageHeading eyebrow="02 / ORGANIZE NOTES" title="Loading your notes…" />}>
+      <Suspense fallback={<OrbitPageHeading title="Notes" subtitle="Loading your notes…" />}>
         <LectureNotesContent params={params} />
       </Suspense>
     </OrbitPage>

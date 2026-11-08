@@ -52,6 +52,22 @@ beforeEach(() => push.mockClear());
 afterEach(() => vi.unstubAllGlobals());
 
 describe("CaptureWorkspace", () => {
+  it("states what the page does and offers help without decorative copy", () => {
+    const { container } = render(<CaptureWorkspace subjects={categories} signedIn />);
+    expect(screen.getByRole("heading", { level: 1, name: "Capture Notes" })).toBeInTheDocument();
+    expect(screen.getByText("Upload whiteboard photos to create organized notes.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "How It Works" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Upload Photos" })).toBeEnabled();
+    expect(screen.getByText(/JPG, PNG or HEIC · up to 20 MB/)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/good notes start here|connect the dots|01 \/ /i);
+  });
+
+  it("shows lecture audio only as coming soon", () => {
+    render(<CaptureWorkspace subjects={categories} signedIn />);
+    expect(screen.getByText("Lecture Audio")).toBeInTheDocument();
+    expect(screen.getByText("Coming soon")).toBeInTheDocument();
+  });
+
   it("keeps the subject picker, new-subject field and photos editable after a failed attempt", async () => {
     let ok = false;
     backend(() => ok);
@@ -59,7 +75,7 @@ describe("CaptureWorkspace", () => {
     render(<CaptureWorkspace subjects={categories} signedIn />);
 
     await addPhotos(user, "board1.jpg");
-    await user.click(screen.getByRole("button", { name: /organize notes/i }));
+    await user.click(screen.getByRole("button", { name: /generate notes/i }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't generate notes right now");
 
     const picker = screen.getByLabelText(/assign to subject/i);
@@ -83,7 +99,7 @@ describe("CaptureWorkspace", () => {
     render(<CaptureWorkspace subjects={categories} signedIn />);
 
     await addPhotos(user, "board1.jpg");
-    await user.click(screen.getByRole("button", { name: /organize notes/i }));
+    await user.click(screen.getByRole("button", { name: /generate notes/i }));
     await screen.findByRole("alert");
 
     await addPhotos(user, "board2.jpg");
@@ -104,12 +120,12 @@ describe("CaptureWorkspace", () => {
     render(<CaptureWorkspace subjects={categories} signedIn />);
 
     await addPhotos(user, "board1.jpg");
-    await user.click(screen.getByRole("button", { name: /organize notes/i }));
+    await user.click(screen.getByRole("button", { name: /generate notes/i }));
     await screen.findByRole("alert");
 
     await user.selectOptions(screen.getByLabelText(/assign to subject/i), "Calculus II");
     ok = true;
-    await user.click(screen.getByRole("button", { name: /try again|organize notes/i }));
+    await user.click(screen.getByRole("button", { name: /try again|generate notes/i }));
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/lectures/${id(2)}`));
 
     expect(calls).toContainEqual({ method: "DELETE", url: `/api/lectures/${id(1)}?unfinished=1`, body: undefined });
@@ -126,12 +142,12 @@ describe("CaptureWorkspace", () => {
     render(<CaptureWorkspace subjects={categories} signedIn />);
 
     await addPhotos(user, "board1.jpg");
-    await user.click(screen.getByRole("button", { name: /organize notes/i }));
+    await user.click(screen.getByRole("button", { name: /generate notes/i }));
     await screen.findByRole("alert");
     await user.click(screen.getByRole("button", { name: /start over/i }));
 
     expect(calls).toContainEqual({ method: "DELETE", url: `/api/lectures/${id(1)}?unfinished=1`, body: undefined });
     expect(screen.queryByText("board1.jpg")).toBeNull();
-    expect(screen.getByRole("button", { name: /organize notes/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /generate notes/i })).toBeDisabled();
   });
 });

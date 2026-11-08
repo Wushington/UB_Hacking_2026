@@ -9,9 +9,11 @@ export type DashboardView = {
     notesSaved: number;
     quizzesTaken: number;
     streakDays: number;
+    /** How many of the user's notes have a flashcard deck. */
+    decksGenerated: number;
   };
   classes: { id: string; name: string; noteCount: number }[];
-  recentNotes: { id: string; title: string; className: string | null; source: "Handwritten" | "Audio" | "Notes"; dayLabel: string }[];
+  recentNotes: { id: string; title: string; className: string | null; source: "Handwritten" | "Audio" | "Notes"; dayLabel: string; hasFlashcards: boolean }[];
   weakConcepts: { id: string; label: string; detail: string }[];
   weakConceptCount: number;
 };
@@ -20,7 +22,7 @@ export function emptyDashboard(signedIn: boolean): DashboardView {
   return {
     signedIn,
     firstName: null,
-    stats: { quizAccuracy: null, notesSaved: 0, quizzesTaken: 0, streakDays: 0 },
+    stats: { quizAccuracy: null, notesSaved: 0, quizzesTaken: 0, streakDays: 0, decksGenerated: 0 },
     classes: [],
     recentNotes: [],
     weakConcepts: [],

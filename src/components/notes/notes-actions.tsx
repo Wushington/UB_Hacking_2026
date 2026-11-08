@@ -104,9 +104,9 @@ export function NotesActions({
             type="button"
             onClick={moveSubject}
             disabled={!changed || busy}
-            className={`${buttonClass} bg-[#ff5e7a] text-white hover:bg-[#ff7891] disabled:hover:bg-[#ff5e7a]`}
+            className={`${buttonClass} border border-[#333564] bg-[#1e1f45] text-white hover:bg-[#2a2b5a] disabled:hover:bg-[#1e1f45]`}
           >
-            Change subject
+            Change Subject
           </button>
         </div>
 
@@ -118,7 +118,7 @@ export function NotesActions({
             className={`${buttonClass} border border-[#ff5e7a]/50 text-[#ff5e7a] hover:bg-[#281d35]`}
           >
             <Trash2 aria-hidden className="size-4" />
-            Delete notes
+            Delete Notes
           </button>
         ) : null}
       </div>
@@ -126,7 +126,7 @@ export function NotesActions({
       {confirming ? (
         <div role="alertdialog" aria-label="Delete these notes?" className="flex flex-col gap-3 rounded-[12px] bg-[#281d35] p-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[13px] leading-[1.6] text-[#e8e6ff]">
-            Delete these notes? Their photos, flashcards, quiz history and explanations are deleted too. This can’t be undone.
+            Delete these notes? Their photos, flashcards, study history and explanations are deleted too. This can’t be undone.
           </p>
           <div className="flex shrink-0 gap-2">
             <button

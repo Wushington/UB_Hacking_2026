@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PageContainer, PageHeader } from "@/components/layout/page";
+import { HowItWorks } from "@/components/orbit/how-it-works";
+import { OrbitPage, OrbitPageHeading } from "@/components/orbit/shell";
 import { requireUserId, UnauthorizedError } from "@/lib/auth";
 import { listWeakConcepts } from "@/lib/weak-concepts/store";
 import { WeakConceptsList } from "./weak-concepts-list";
+
+export const metadata: Metadata = {
+  title: "Weak Concepts · Orbit Study",
+};
+
+const HOW_IT_WORKS = ["Review the concepts you missed.", "Open the related flashcards or notes.", "Study the material again or record an explanation."];
 
 async function WeakConcepts() {
   let userId: string;
@@ -17,11 +25,11 @@ async function WeakConcepts() {
 
 export default function Page() {
   return (
-    <PageContainer>
-      <PageHeader title="Weak concepts" description="Concepts you missed on flashcards or struggled to explain. Study these first." />
+    <OrbitPage>
+      <OrbitPageHeading title="Weak Concepts" subtitle="Review concepts you missed." aside={<HowItWorks steps={HOW_IT_WORKS} />} />
       <Suspense fallback={<p role="status" className="text-muted-foreground">Loading your weak concepts…</p>}>
         <WeakConcepts />
       </Suspense>
-    </PageContainer>
+    </OrbitPage>
   );
 }

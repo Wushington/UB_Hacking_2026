@@ -10,7 +10,12 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 /** Weak concepts in the order given (most recent first). Server-renderable: no client state. */
 export function WeakConceptsList({ concepts }: { concepts: WeakConceptView[] }) {
   if (concepts.length === 0) {
-    return <p className="text-muted-foreground">No weak concepts yet. Cards you mark Missed and weak points from your explanation recordings will appear here.</p>;
+    return (
+      <div className="flex flex-col items-start gap-3">
+        <p className="text-muted-foreground">No weak concepts yet. Cards you mark Missed and weak points from your explanations will appear here.</p>
+        <Link href="/quizzes" className={buttonVariants({ size: "sm" })}>Study Flashcards</Link>
+      </div>
+    );
   }
 
   return (
@@ -43,19 +48,19 @@ export function WeakConceptsList({ concepts }: { concepts: WeakConceptView[] }) 
                 </details>
               )}
               <div className="flex flex-wrap gap-2">
-                <Link href={`/explain?concept=${c.id}`} className={buttonVariants({ size: "sm" })}>
-                  <Mic aria-hidden />
-                  Explain it out loud
-                </Link>
                 {c.missedCardCount > 0 && (
-                  <Link href={`/lectures/${c.lectureId}/study`} className={buttonVariants({ size: "sm" })}>Study flashcards</Link>
+                  <Link href={`/lectures/${c.lectureId}/study`} className={buttonVariants({ size: "sm" })}>Study Flashcards</Link>
                 )}
+                <Link href={`/explain?concept=${c.id}`} className={buttonVariants({ size: "sm", variant: c.missedCardCount > 0 ? "outline" : "default" })}>
+                  <Mic aria-hidden />
+                  Record Explanation
+                </Link>
                 {c.explanationFeedbackCount > 0 && (
                   <>
                     {c.feedbackRecordingId && (
-                      <Link href={`/explain?recording=${c.feedbackRecordingId}`} className={buttonVariants({ size: "sm", variant: "outline" })}>View explanation feedback</Link>
+                      <Link href={`/explain?recording=${c.feedbackRecordingId}`} className={buttonVariants({ size: "sm", variant: "outline" })}>View Feedback</Link>
                     )}
-                    <Link href={`/lectures/${c.lectureId}`} className={buttonVariants({ size: "sm", variant: "outline" })}>Review notes</Link>
+                    <Link href={`/lectures/${c.lectureId}`} className={buttonVariants({ size: "sm", variant: "outline" })}>View Notes</Link>
                   </>
                 )}
               </div>
