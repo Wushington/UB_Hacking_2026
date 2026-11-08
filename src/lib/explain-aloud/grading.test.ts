@@ -57,6 +57,7 @@ describe("parseGradingResponse", () => {
       transcriptText: "Electrons go down the chain.",
       weakPoints: [{ ...wp(), evidence: "involved near the end" }],
       covered: [],
+      masteredConceptKeys: [],
     });
   });
 
@@ -92,6 +93,7 @@ describe("parseGradingResponse", () => {
       transcriptText: "All correct.",
       weakPoints: [],
       covered: [],
+      masteredConceptKeys: [],
     });
   });
 
@@ -127,6 +129,59 @@ describe("parseGradingResponse", () => {
     expect(prompt).toMatch(/summary:/);
     expect(prompt).toMatch(/covered:/);
     expect(prompt).toMatch(/nextStep:/);
+  });
+
+  it("keeps only mastered keys the student has open, normalized, and never one flagged as a gap", () => {
+    const open = new Set(["oxygen-final-electron-acceptor", "proton-gradient-direction", "atp-synthase"]);
+    const result = parseGradingResponse(
+      JSON.stringify({
+        transcriptText: "text",
+        weakPoints: [wp({ conceptKey: "Proton gradient direction", referenceNoteBlockIds: [B2] })],
+        masteredConceptKeys: [
+          " Oxygen Final Electron Acceptor ", // normalized to an open key
+          "oxygen-final-electron-acceptor", // duplicate
+          "proton-gradient-direction", // also a gap in this attempt: dropped
+          "made-up-concept", // not open: dropped
+          42,
+        ],
+      }),
+      valid,
+      open,
+    );
+    expect(result.masteredConceptKeys).toEqual(["oxygen-final-electron-acceptor"]);
+    expect(result.weakPoints.map((w) => w.conceptKey)).toEqual(["proton-gradient-direction"]);
+  });
+
+  it("defaults mastered keys to empty when missing, invalid, or no concepts are open", () => {
+    expect(parseGradingResponse(JSON.stringify({ transcriptText: "t", weakPoints: [] }), valid).masteredConceptKeys).toEqual([]);
+    expect(
+      parseGradingResponse(JSON.stringify({ transcriptText: "t", weakPoints: [], masteredConceptKeys: "x" }), valid, new Set(["x"]))
+        .masteredConceptKeys,
+    ).toEqual([]);
+    expect(
+      parseGradingResponse(JSON.stringify({ transcriptText: "t", weakPoints: [], masteredConceptKeys: ["x"] }), valid)
+        .masteredConceptKeys,
+    ).toEqual([]);
+  });
+
+  it("lists the student's open weak concepts in the prompt", () => {
+    const prompt = buildGradingPrompt(notes, [{ conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role" }]);
+    expect(prompt).toContain("- oxygen-final-electron-acceptor — Give oxygen its specific role");
+    expect(prompt).toMatch(/masteredConceptKeys/);
+    expect(prompt).toMatch(/reuse that concept's exact key/);
+    expect(buildGradingPrompt(notes)).toMatch(/no open weak concepts/);
+    // Resolved concepts are listed only for key reuse (so a renewed struggle reopens them).
+    const withResolved = buildGradingPrompt(notes, [], [{ conceptKey: "atp-synthase-role", label: "Name ATP synthase's job" }]);
+    expect(withResolved).toMatch(/previously resolved/);
+    expect(withResolved).toContain("- atp-synthase-role — Name ATP synthase's job");
+  });
+
+  it("tells Gemini which concept the student chose and makes it a mastery candidate", () => {
+    const chosen = { conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role" };
+    const prompt = buildGradingPrompt(notes, [chosen], [], chosen);
+    expect(prompt).toContain('The student chose to explain this concept: "Give oxygen its specific role"');
+    expect(prompt).toContain("include oxygen-final-electron-acceptor in masteredConceptKeys");
+    expect(buildGradingPrompt(notes, [chosen])).not.toContain("chose to explain this concept");
   });
 
   it("rejects non-JSON output", () => {

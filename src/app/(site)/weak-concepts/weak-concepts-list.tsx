@@ -1,3 +1,4 @@
+import { Mic } from "lucide-react";
 import Link from "next/link";
 import type { WeakConceptView } from "@/contracts/weak-concepts";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +43,10 @@ export function WeakConceptsList({ concepts }: { concepts: WeakConceptView[] }) 
                 </details>
               )}
               <div className="flex flex-wrap gap-2">
+                <Link href={`/explain?concept=${c.id}`} className={buttonVariants({ size: "sm" })}>
+                  <Mic aria-hidden />
+                  Explain it out loud
+                </Link>
                 {c.missedCardCount > 0 && (
                   <Link href={`/lectures/${c.lectureId}/study`} className={buttonVariants({ size: "sm" })}>Study flashcards</Link>
                 )}
