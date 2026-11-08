@@ -2,7 +2,7 @@
 
 Kept deliberately simple: fix phone rotation, cap the size, even out contrast.
 Perspective correction (finding the board/page corners) is a stretch goal;
-test whether it actually helps on your photos before spending time on it.
+test whether it actually helps on photos before spending time on it.
 """
 import io
 

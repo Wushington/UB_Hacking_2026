@@ -5,7 +5,7 @@ to browsers. All other Gemini features (flashcards, audio, explanations) live
 in the Next.js app.
 
 Run with:  uvicorn main:app --reload --port 8000
-Interactive docs for your teammates: http://localhost:8000/docs
+Interactive docs for teammates: http://localhost:8000/docs
 """
 import asyncio
 from pathlib import Path

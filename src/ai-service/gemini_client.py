@@ -8,8 +8,8 @@ from pydantic import BaseModel, ValidationError
 
 from schemas import GeminiNotes, NoteBlock, NoteSection, NotesGeneration, SourceRef
 
-# Set GEMINI_MODEL in .env (shared with the Next.js app). The -latest alias is
-# the fallback so we are not hardcoding a version that gets retired.
+# Use the alias to prevent hardcoding a version that gets retired.
+# To pin a specific model, set GEMINI_MODEL in .env.local (shared with the Next.js app).
 MODEL = os.getenv("GEMINI_MODEL", "").strip() or "gemini-flash-latest"
 
 # Reads GEMINI_API_KEY from the environment.
