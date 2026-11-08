@@ -129,3 +129,20 @@
     @apply font-sans;
   }
 }
+/* Orbit dark theme (dashboard). Accent fills carry white text at >= 4.5:1; accent-text is for links on dark surfaces. */
+@theme {
+  --color-orbit-bg: #0c0d27;
+  --color-orbit-surface: #151632;
+  --color-orbit-raised: #1d1e44;
+  --color-orbit-sunken: #0a0b1e;
+  --color-orbit-chip: #2a2b5a;
+  --color-orbit-line: rgb(72 74 159 / 0.38);
+  --color-orbit-text: #ecebff;
+  --color-orbit-muted: #9a9cc7;
+  --color-orbit-accent: #e11d48;
+  --color-orbit-accent-hover: #c8163d;
+  --color-orbit-accent-text: #ff6b85;
+  --color-orbit-accent-soft: #3a1a2c;
+  --color-orbit-success: #4ecba0;
+  --color-orbit-success-soft: #163d33;
+}
