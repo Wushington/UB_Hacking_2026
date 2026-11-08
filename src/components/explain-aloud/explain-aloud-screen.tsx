@@ -126,7 +126,14 @@ function Placeholder({ children, bordered = true }: { children: ReactNode; borde
 }
 
 function Icon({ name, width, height, className }: { name: string; width: number; height: number; className?: string }) {
-  return <Image src={`${ASSETS}/${name}.svg`} alt="" width={width} height={height} className={cn("block max-w-none", className)} />;
+  // A wrapper sized exactly to the asset with `fill` inside: Next/Image compares the browser's
+  // rounded pixel size with a fractional width/height attribute (e.g. 13.5) and falsely warns
+  // "width or height modified". Fill mode keeps the geometry identical without that check.
+  return (
+    <span aria-hidden className={cn("relative block shrink-0", className)} style={{ width, height }}>
+      <Image src={`${ASSETS}/${name}.svg`} alt="" fill sizes={`${Math.ceil(width)}px`} className="block max-w-none" />
+    </span>
+  );
 }
 
 function attemptTone(state: ExplainAloudState): PillTone {
@@ -219,7 +226,7 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
           <Image src={`${ASSETS}/star-field.svg`} alt="" fill className="block max-w-none" />
         </div>
         <div className="absolute bottom-[-120px] left-0 h-[440px] w-full min-w-[1440px] opacity-24">
-          <Image src={`${ASSETS}/lunar-atmosphere.jpg`} alt="" fill sizes="100vw" className="object-cover" />
+          <Image src={`${ASSETS}/lunar-atmosphere.jpg`} alt="" fill sizes="100vw" loading="eager" className="object-cover" />
         </div>
         <div className="absolute bottom-[40px] left-0 h-[280px] w-full bg-gradient-to-b from-[#0d0e2a] to-[rgba(13,14,42,0)]" />
       </div>
