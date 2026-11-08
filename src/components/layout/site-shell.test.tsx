@@ -84,7 +84,7 @@ describe("SiteShell", () => {
     renderShell("/explain");
     const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: /learning loop/i });
     expect(within(loop).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "01  /  Capture a subject→",
+      "01  /  Capture your notes→",
       "02  /  Organize notes→",
       "03  /  Take a quiz→",
       "04  /  Find the gaps→",
@@ -94,7 +94,7 @@ describe("SiteShell", () => {
   });
 
   it.each([
-    ["/capture", "Capture a subject"],
+    ["/capture", "Capture your notes"],
     ["/lectures/abc", "Organize notes"],
     ["/lectures/abc/study", "Take a quiz"],
   ])("highlights the learning-loop step for %s", (pathname, step) => {

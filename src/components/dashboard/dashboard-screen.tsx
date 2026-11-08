@@ -303,7 +303,7 @@ export function DashboardScreen({ view, className }: { view: DashboardView; clas
             A little closer to your next aha{name}.
           </h1>
           <p className="text-[14px] text-orbit-muted">
-            {view.signedIn ? "Capture a subject. Connect the dots. Make it stick." : "Sign in to capture subjects, track quizzes and find your gaps."}
+            {view.signedIn ? "Capture your notes. Connect the dots. Make it stick." : "Sign in to capture your notes, track quizzes and find your gaps."}
           </p>
         </div>
         {streak > 0 ? (

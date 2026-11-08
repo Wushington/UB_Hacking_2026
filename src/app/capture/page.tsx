@@ -7,7 +7,7 @@ import { listCategories } from "@/lib/lectures/store";
 
 
 export const metadata: Metadata = {
-  title: "Capture a subject · Orbit Study",
+  title: "Capture your notes · Orbit Study",
 };
 
 /** Reads the session and the user's subjects at request time; streamed in behind the static shell. */

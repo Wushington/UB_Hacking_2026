@@ -179,7 +179,7 @@ export function CaptureWorkspace({
   return (
     <>
       <OrbitPageHeading
-        eyebrow="01 / CAPTURE A SUBJECT"
+        eyebrow="01 / CAPTURE YOUR NOTES"
         title="Good notes start here."
         subtitle="Bring a whiteboard photo or lecture audio. We’ll help you connect the dots."
         aside={subjectName ? <Pill>{subjectName}</Pill> : null}
