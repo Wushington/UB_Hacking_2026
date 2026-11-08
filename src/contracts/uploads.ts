@@ -41,9 +41,20 @@ export const prepareUploadResponseSchema = z.object({
 });
 export type PrepareUploadResponse = z.infer<typeof prepareUploadResponseSchema>;
 
-/** POST /api/uploads/finalize — the server verifies the stored object before recording it. */
+export const UPLOAD_PURPOSES = ["lecture_image", "lecture_audio", "explanation_audio"] as const satisfies readonly UploadPurpose[];
+
+/**
+ * POST /api/uploads/finalize — the server verifies the stored object before recording it.
+ * `uploadId` is the random part of the object key, so (owner, purpose, uploadId) locates the
+ * object without a pending-uploads table. `durationMs` is client-measured and only advisory.
+ */
 export const finalizeUploadSchema = z.object({
   uploadId: z.uuid(),
+  purpose: z.enum(UPLOAD_PURPOSES),
   lectureId: z.uuid().optional(),
+  durationMs: z.number().int().positive().optional(),
 });
 export type FinalizeUpload = z.infer<typeof finalizeUploadSchema>;
+
+export const finalizeUploadResponseSchema = z.object({ id: z.uuid() });
+export type FinalizeUploadResponse = z.infer<typeof finalizeUploadResponseSchema>;

@@ -11,9 +11,22 @@ export const weakPointSchema = z.object({
 });
 export type WeakPoint = z.infer<typeof weakPointSchema>;
 
-/** Gemini explanation-evaluation output. An empty weakPoints list is valid. */
+/** Most ideas listed under "What you covered". */
+export const MAX_COVERED_IDEAS = 5;
+
+/**
+ * Gemini explanation-evaluation output. An empty weakPoints list is valid.
+ * summary / covered / nextStep are the coaching parts shown above and below the gaps; they're
+ * optional so feedback saved before they existed (or a sparse answer) still validates.
+ */
 export const explanationFeedbackSchema = z.object({
   transcriptText: z.string(),
   weakPoints: z.array(weakPointSchema),
+  /** One or two encouraging sentences: what landed and what to sharpen. */
+  summary: nonEmptyText.optional(),
+  /** Ideas from the notes the student explained correctly. */
+  covered: z.array(nonEmptyText).max(MAX_COVERED_IDEAS).default([]),
+  /** A concrete instruction for the next attempt. */
+  nextStep: nonEmptyText.optional(),
 });
 export type ExplanationFeedback = z.infer<typeof explanationFeedbackSchema>;
