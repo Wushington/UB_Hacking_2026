@@ -31,7 +31,7 @@ export type ExplainAloudView = {
   concept: {
     title: string;
     breadcrumb: string | null;
-    /** The question the student answered. Not stored yet, so always null for now. */
+    /** The question to answer: the missed flashcard behind a selected weak concept, when there is one. */
     prompt: string | null;
     /** Shown instead of the prompt when the attempt targets a selected weak concept. */
     instruction: string | null;
@@ -169,7 +169,7 @@ function conceptBreadcrumb(categoryName: string | null, lectureTitle: string) {
 }
 
 /** An open weak concept the recorder can target (the picker shows those in the chosen class). */
-export type ConceptOption = { id: string; conceptKey: string; label: string; lectureId: string };
+export type ConceptOption = { id: string; conceptKey: string; label: string; lectureId: string; question: string | null };
 
 /** A selected weak concept, before any attempt is recorded for it. */
 export type SelectedConcept = {
@@ -178,6 +178,8 @@ export type SelectedConcept = {
   lectureId: string;
   lectureTitle: string;
   categoryName: string | null;
+  /** The most recently missed flashcard's question; null if the concept came only from a recording. */
+  question: string | null;
 };
 
 export function readyToRecordView(selected: SelectedConcept): ExplainAloudView {
@@ -190,7 +192,7 @@ export function readyToRecordView(selected: SelectedConcept): ExplainAloudView {
     concept: {
       title: selected.label,
       breadcrumb: conceptBreadcrumb(selected.categoryName, lectureTitle),
-      prompt: null,
+      prompt: selected.question,
       instruction: CONCEPT_INSTRUCTION,
       attemptLabel: null,
     },

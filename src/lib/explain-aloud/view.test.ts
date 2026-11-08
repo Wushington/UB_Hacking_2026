@@ -85,6 +85,12 @@ describe("toExplainAloudView", () => {
     expect(toExplainAloudView(rows()).conceptKey).toBeNull();
   });
 
+  it("asks the missed flashcard's question when a selected concept has one", () => {
+    const selected = { conceptKey: "atp-synthase", label: "ATP synthase", lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c", lectureTitle: "Cellular respiration", categoryName: null };
+    expect(readyToRecordView({ ...selected, question: "What does ATP synthase do?" }).concept).toMatchObject({ title: "ATP synthase", prompt: "What does ATP synthase do?" });
+    expect(readyToRecordView({ ...selected, question: null }).concept).toMatchObject({ title: "ATP synthase", prompt: null, instruction: expect.any(String) });
+  });
+
   it("builds a ready-to-record view for a selected concept", () => {
     const view = readyToRecordView({
       conceptKey: "atp-synthase",
@@ -92,6 +98,7 @@ describe("toExplainAloudView", () => {
       lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c",
       lectureTitle: "Cellular respiration",
       categoryName: null,
+      question: null,
     });
     expect(view).toMatchObject({
       state: "ready-to-record",

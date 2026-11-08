@@ -127,6 +127,20 @@ describe("ExplainAloudScreen", () => {
     expect(screen.queryByRole("region", { name: "Rate your explanation" })).not.toBeInTheDocument();
   });
 
+  it("shows the topic and the question when recording a concept that has one", () => {
+    const view = readyToRecordView({
+      conceptKey: "circular-array",
+      label: "Circular array queue",
+      lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c",
+      lectureTitle: "Stacks and Queues",
+      categoryName: "CSE 116",
+      question: "Why use a circular array for a queue?",
+    });
+    render(<ExplainAloudScreen view={view} lectures={[{ id: view.lectureId!, title: "Stacks and Queues" }]} />);
+    expect(screen.getByRole("heading", { name: "Circular array queue" })).toBeInTheDocument();
+    expect(screen.getByText("“Why use a circular array for a queue?”")).toBeInTheDocument();
+  });
+
   it("sets up a new attempt on a weak concept picked from the Weak concepts page", () => {
     const view = readyToRecordView({
       conceptKey: "oxygen-final-electron-acceptor",
@@ -134,12 +148,13 @@ describe("ExplainAloudScreen", () => {
       lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c",
       lectureTitle: "Cellular respiration",
       categoryName: "Biology",
+      question: null,
     });
     const { container } = render(
       <ExplainAloudScreen
         view={view}
         lectures={[{ id: view.lectureId!, title: "Cellular respiration" }]}
-        concepts={[{ id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: view.lectureId! }]}
+        concepts={[{ id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: view.lectureId!, question: null }]}
       />,
     );
     expect(screen.getByRole("heading", { level: 1, name: "Explain a Concept" })).toBeInTheDocument();
