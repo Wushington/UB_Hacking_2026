@@ -1,4 +1,5 @@
 import {
+  ArrowLeft,
   ArrowUpRight,
   AudioLines,
   ChevronRight,
@@ -296,6 +297,10 @@ export function DashboardScreen({ view, className }: { view: DashboardView; clas
 
   return (
     <div className={cn("mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-[30px] px-4 pt-8 pb-9 sm:px-6 lg:px-10 lg:pt-[38px] xl:px-14", className)}>
+      <Link href="/sign-up" className="inline-flex min-h-10 items-center gap-2 self-start rounded-full border border-orbit-line bg-orbit-surface/60 px-4 text-[13px] text-orbit-muted transition-colors hover:border-orbit-accent hover:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orbit-accent">
+        <ArrowLeft size={16} aria-hidden="true" />
+        Back to sign up
+      </Link>
       <div className="flex flex-col gap-4 motion-safe:animate-rise sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-col gap-[9px]">
           <p className={eyebrow}>Your space to understand</p>

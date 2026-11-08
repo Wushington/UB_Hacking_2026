@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { z } from "zod";
+import { ExportNotesPdf } from "@/components/notes/export-notes-pdf";
 import { NotesActions } from "@/components/notes/notes-actions";
 import { NotesView } from "@/components/notes/notes-view";
 import { orbitCardClass, OrbitPage, OrbitPageHeading, Pill } from "@/components/orbit/shell";
@@ -61,7 +62,7 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
       </Message>
     );
   } else {
-    body = <NotesView sections={lecture.sections} />;
+    body = <div id="orbit-notes-content"><NotesView sections={lecture.sections} /></div>;
   }
 
   return (
@@ -73,6 +74,7 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
         aside={
           lecture ? (
             <div className="flex flex-wrap items-center gap-2">
+              {lecture.status === "ready" && <ExportNotesPdf title={lecture.title} subject={lecture.categoryName} />}
               {lecture.categoryName ? <Pill>{lecture.categoryName}</Pill> : null}
               {lecture.status === "ready" ? (
                 <Link
