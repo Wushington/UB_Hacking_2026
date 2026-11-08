@@ -12,7 +12,7 @@ const cards: StudyCard[] = [1, 2, 3].map((n) => ({
   question: `Question ${n}?`, answer: `Answer ${n}.`, conceptLabel: `Concept ${n}`,
 }));
 const props = { deckTitle: "Test deck", subtitle: "Biology", cards, random: () => 0.99, isSample: true };
-const unsaved = "This session wasn't saved. Saving study results isn't connected yet.";
+const unsaved = "Sample sessions aren't saved. Sign in and open one of your decks to track results.";
 
 async function finish(user: ReturnType<typeof userEvent.setup>, total = 3) {
   for (let i = 0; i < total; i++) {

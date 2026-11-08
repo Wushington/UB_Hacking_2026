@@ -7,14 +7,17 @@ import { Suspense } from "react";
 import { AccountMenu } from "@/components/explain-aloud/account-menu";
 import { cn } from "@/lib/utils";
 
-/** `also` lists other paths that count as this section. */
-type NavItem = { label: string; href?: string; also?: string[] };
+/** `also` lists other paths that count as this section; `matches` covers dynamic ones. */
+type NavItem = { label: string; href?: string; also?: string[]; matches?: (pathname: string) => boolean };
+
+/** A lecture's flashcard study page belongs to Quizzes. */
+const isStudyPage = (pathname: string) => /^\/lectures\/[^/]+\/study$/.test(pathname);
 
 /** `href` is omitted for sections that don't have a page yet; they render as "Soon" labels, not dead links. */
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/" },
   { label: "My classes" },
-  { label: "Quizzes" },
+  { label: "Quizzes", href: "/quizzes", matches: isStudyPage },
   // Weak concepts are practised on the explain page; the full list stays reachable at /weak-concepts.
   { label: "Weak concepts", href: "/explain", also: ["/weak-concepts"] },
 ];
@@ -44,7 +47,7 @@ function NavLinks({ pathname }: { pathname: string }) {
       aria-label="Main"
       className="order-last -mx-1 flex w-full items-center gap-1 overflow-x-auto px-1 lg:order-none lg:mx-0 lg:w-auto lg:gap-2 lg:overflow-visible lg:px-0"
     >
-      {NAV_ITEMS.map(({ label, href, also = [] }) => {
+      {NAV_ITEMS.map(({ label, href, also = [], matches }) => {
         if (!href) {
           return (
             <span key={label} aria-disabled="true" title={`${label} is coming soon`} className={cn(itemClass, "cursor-not-allowed text-orbit-muted/70")}>
@@ -53,7 +56,7 @@ function NavLinks({ pathname }: { pathname: string }) {
             </span>
           );
         }
-        const active = [href, ...also].some((path) => isCurrent(path, pathname));
+        const active = [href, ...also].some((path) => isCurrent(path, pathname)) || (matches?.(pathname) ?? false);
         return (
           <Link
             key={label}

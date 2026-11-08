@@ -112,7 +112,7 @@ export function StudySessionView({ deckTitle, subtitle, cards, onComplete, rando
               </section>
               <section className={cn(panel, "gap-4 bg-[#0a0b1e] p-[26px]")} aria-label="Session saving">
                 <p aria-live="polite" className="text-[13px] text-[#c1bedf]">
-                  {!onComplete ? "This session wasn't saved. Saving study results isn't connected yet."
+                  {!onComplete ? "Sample sessions aren't saved. Sign in and open one of your decks to track results."
                     : saveStatus === "saving" ? "Saving…"
                     : saveStatus === "saved" ? "Saved"
                     : saveStatus === "error" ? "Couldn't save this session. Please try again."

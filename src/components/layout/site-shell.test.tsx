@@ -44,6 +44,8 @@ describe("SiteShell", () => {
     ["/", "Home"],
     ["/weak-concepts", "Weak concepts"],
     ["/explain", "Weak concepts"],
+    ["/quizzes", "Quizzes"],
+    ["/lectures/abc/study", "Quizzes"],
   ])("marks the current section on %s", (pathname, label) => {
     renderShell(pathname);
     const main = screen.getByRole("navigation", { name: "Main" });
@@ -54,13 +56,25 @@ describe("SiteShell", () => {
   it("labels unbuilt sections and controls as coming soon instead of linking nowhere", () => {
     renderShell("/");
     const main = screen.getByRole("navigation", { name: "Main" });
-    expect(within(main).queryByRole("link", { name: /my classes|quizzes/i })).toBeNull();
+    expect(within(main).queryByRole("link", { name: /my classes/i })).toBeNull();
     expect(within(main).getByText("My classes").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
     for (const name of [/search/i, /notifications/i]) {
       const control = screen.getByRole("button", { name });
       expect(control).toBeDisabled();
       expect(control).toHaveAccessibleName(/coming soon/i);
     }
+  });
+
+  it("links Quizzes to the flashcard decks page", () => {
+    renderShell("/");
+    const main = screen.getByRole("navigation", { name: "Main" });
+    expect(within(main).getByRole("link", { name: "Quizzes" })).toHaveAttribute("href", "/quizzes");
+  });
+
+  it.each(["/quizzes", "/lectures/abc/study"])("highlights Take a quiz in the footer on %s", (pathname) => {
+    renderShell(pathname);
+    const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: /learning loop/i });
+    expect(within(loop).getByText("Take a quiz", { exact: false }).closest("li")).toHaveAttribute("aria-current", "step");
   });
 
   it("shows the learning loop in the footer and highlights the current step", () => {
