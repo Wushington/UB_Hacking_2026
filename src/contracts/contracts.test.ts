@@ -179,3 +179,27 @@ describe("self-rating (clearing weak concepts)", () => {
     expect([4, 5].map(selfRatingOutcome)).toEqual(["removed", "removed"]);
   });
 });
+
+describe("subject dividers", () => {
+  it("needs a 1–60 character name", async () => {
+    const { createDividerSchema } = await import("./dividers");
+    expect(createDividerSchema.parse({ name: "  Fall 2026 " }).name).toBe("Fall 2026");
+    expect(createDividerSchema.safeParse({ name: "   " }).success).toBe(false);
+    expect(createDividerSchema.safeParse({ name: "x".repeat(61) }).success).toBe(false);
+  });
+
+  it("accepts a rename, collapse or one-step move, but not an empty change", async () => {
+    const { updateDividerSchema } = await import("./dividers");
+    expect(updateDividerSchema.safeParse({ collapsed: true }).success).toBe(true);
+    expect(updateDividerSchema.safeParse({ move: "down" }).success).toBe(true);
+    expect(updateDividerSchema.safeParse({ move: "sideways" }).success).toBe(false);
+    expect(updateDividerSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("moves a subject to a divider id or out of dividers (null)", async () => {
+    const { moveSubjectSchema } = await import("./dividers");
+    expect(moveSubjectSchema.safeParse({ dividerId: null }).success).toBe(true);
+    expect(moveSubjectSchema.safeParse({ dividerId: id(1) }).success).toBe(true);
+    expect(moveSubjectSchema.safeParse({ dividerId: "fall" }).success).toBe(false);
+  });
+});

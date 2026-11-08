@@ -27,6 +27,7 @@ describe("database schema", () => {
     expect([...byName.keys()].sort()).toEqual(
       [
         "users",
+        "subject_dividers",
         "categories",
         "lectures",
         "lecture_images",
@@ -53,6 +54,7 @@ describe("database schema", () => {
   });
 
   it.each([
+    "subject_dividers",
     "categories",
     "lectures",
     "lecture_images",
@@ -86,6 +88,8 @@ describe("database schema", () => {
 
   it("enforces the spec's uniqueness rules", () => {
     expect(uniqueSets("categories")).toContain("normalized_name,user_id");
+    // Deleting a divider moves its subjects out instead of deleting them.
+    expect(parentOf("categories", "divider_id")).toEqual({ table: "subject_dividers", onDelete: "set null" });
     expect(uniqueSets("study_review_events")).toContain("flashcard_id,session_id");
     expect(uniqueSets("weak_concepts")).toContain("concept_key,lecture_id,user_id");
     expect(uniqueSets("weak_concept_sources")).toContain("source_id,source_type,weak_concept_id");

@@ -54,6 +54,22 @@ export const users = pgTable("users", {
   createdAt: createdAt(),
 });
 
+/** User-made dividers that group subjects on My subjects (e.g. by semester). */
+export const subjectDividers = pgTable(
+  "subject_dividers",
+  {
+    id: id(),
+    userId: owner(),
+    name: text("name").notNull(),
+    /** Display order, ascending. */
+    position: integer("position").notNull(),
+    collapsed: boolean("collapsed").notNull().default(false),
+    createdAt: createdAt(),
+  },
+  (t) => [index().on(t.userId)],
+);
+
+/** Subjects ("categories" in code). */
 export const categories = pgTable(
   "categories",
   {
@@ -62,6 +78,8 @@ export const categories = pgTable(
     name: text("name").notNull(),
     /** normalizeCategoryName(name) from src/contracts/categories. */
     normalizedName: text("normalized_name").notNull(),
+    /** The divider this subject sits under on My subjects; null = above the dividers. Deleting a divider never deletes subjects. */
+    dividerId: uuid("divider_id").references(() => subjectDividers.id, { onDelete: "set null" }),
     createdAt: createdAt(),
   },
   (t) => [unique().on(t.userId, t.normalizedName)],

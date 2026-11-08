@@ -41,6 +41,7 @@ uvicorn main:app --reload --port 8000               # docs at http://localhost:8
 | `src/lib/auth.ts` | `requireUserId()` for every server action / route handler. |
 | `src/lib/gemini.ts`, `src/lib/storage.ts` | Server-only Gemini client and private object storage (presigned URLs). |
 | `src/app/capture/`, `src/app/lectures/[id]/page.tsx`, `src/app/subjects/` | Capture (whiteboard photos → notes), the read-only notes page (Markdown + KaTeX; change subject or delete) and My subjects. In the UI a lecture is a set of "notes" and a category is its "subject". |
+| `src/lib/subjects/`, `src/components/subjects/` | My subjects: subjects grouped under collapsible dividers (`subject_dividers` table, migration `0004`). Subjects are drag-and-drop or "Move to…" between dividers. |
 | `src/lib/lectures/` | Creating notes, photo finalize, loading notes, changing subject, deleting, and serving the original photos (`photos.ts`: HEIC gets a JPEG preview from the AI service's `/preview`, stored as `<key>.preview.jpg`). |
 | `src/ai-service/` | Python (FastAPI + OpenCV) service: whiteboard photos → notes. Only the Next.js server calls it, via `src/lib/ai/notes.ts`. All other Gemini features call `src/lib/gemini.ts`. |
 | `src/lib/env.ts` | Environment validation per integration. |
