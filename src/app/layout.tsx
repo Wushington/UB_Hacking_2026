@@ -1,8 +1,10 @@
+
 import { ClerkProvider } from "@clerk/nextjs";
 import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
-import { SiteShell } from "@/components/layout/site-shell";
+import { Suspense } from "react";
+import { AppHeader } from "@/components/layout/app-header";
 import "./globals.css";
 
 const inter = Inter({
@@ -17,16 +19,32 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Orbit Study",
-  description: "Turn whiteboards and lectures into notes, flashcards, and focused study.",
+  description:
+    "Turn whiteboards and lectures into notes, flashcards, and focused study.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: LayoutProps<"/">) {
   return (
-    // `dark` switches the shadcn tokens to the Orbit palette (globals.css) so every page matches the shell.
-    <html lang="en" className={`${inter.variable} ${geistMono.variable} dark h-full antialiased`}>
+    <html
+      lang="en"
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <ClerkProvider appearance={{ theme: shadcn }}>
-          <SiteShell>{children}</SiteShell>
+        <ClerkProvider
+          appearance={{ theme: shadcn }}
+          signInUrl="/sign-in"
+          signUpUrl="/sign-up"
+          signInFallbackRedirectUrl="/home"
+          signUpFallbackRedirectUrl="/home"
+        >
+          <Suspense fallback={null}>
+            <AppHeader />
+          </Suspense>
+          <main className="flex flex-1 flex-col">
+            {children}
+          </main>
         </ClerkProvider>
       </body>
     </html>
