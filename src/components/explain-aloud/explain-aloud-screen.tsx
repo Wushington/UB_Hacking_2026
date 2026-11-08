@@ -2,11 +2,9 @@
 
 import { LoaderCircle } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
 import { feedbackSpeechText, type ExplainAloudState, type ExplainAloudView } from "@/lib/explain-aloud/view";
 import { cn } from "@/lib/utils";
-import { AccountMenu } from "./account-menu";
 import { ExplanationRecorder, type LectureOption } from "./explanation-recorder";
 import { GradingWatcher, RetryGradingButton } from "./grading-status";
 import { ListenButton } from "./listen-button";
@@ -21,14 +19,7 @@ export type ExplainAloudScreenProps = {
   backHref?: string;
 };
 
-const NAV_ITEMS = [
-  { label: "Home", href: "/" },
-  { label: "My classes", href: "/classes" },
-  { label: "Quizzes", href: "/quizzes" },
-  { label: "Weak concepts", href: "/weak-concepts", active: true },
-] as const;
 
-const LEARNING_STEPS = ["Capture a class", "Organize notes", "Take a quiz", "Find the gaps", "Explain & improve"];
 
 /** Decorative waveform shape (no amplitude data is stored); playback colors it. */
 const WAVEFORM = [
@@ -257,60 +248,7 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
   const listenRecordingId = feedbackSpeechText(view) !== null ? view.recordingId : null;
 
   return (
-    <div className={cn("relative isolate flex min-h-dvh w-full flex-col overflow-hidden bg-[#0d0e2a] text-white", className)}>
-      {/* Decorative background layers (bottom-anchored so they stay at the foot of taller mobile pages) */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute top-0 left-0 h-[1080px] w-full min-w-[1440px]">
-          <Image src={`${ASSETS}/star-field.svg`} alt="" fill className="block max-w-none" />
-        </div>
-        <div className="absolute bottom-[-120px] left-0 h-[440px] w-full min-w-[1440px] opacity-24">
-          <Image src={`${ASSETS}/lunar-atmosphere.jpg`} alt="" fill sizes="100vw" loading="eager" className="object-cover" />
-        </div>
-        <div className="absolute bottom-[40px] left-0 h-[280px] w-full bg-gradient-to-b from-[#0d0e2a] to-[rgba(13,14,42,0)]" />
-      </div>
-
-      {/* Navigation */}
-      <header
-        className={cn(
-          "flex w-full shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[rgba(42,43,80,0.25)] bg-[rgba(19,20,48,0.5)] py-3 lg:h-20 lg:flex-nowrap lg:py-0",
-          gutterClass,
-        )}
-      >
-        <Link href="/" className="text-[20px] font-bold tracking-[-0.9px] whitespace-nowrap sm:text-[23px]">
-          Orbit Study
-        </Link>
-        <nav
-          aria-label="Main"
-          className="-mx-1 order-last flex w-full items-center gap-2 overflow-x-auto px-1 lg:order-none lg:mx-0 lg:w-auto lg:overflow-visible lg:px-0"
-        >
-          {NAV_ITEMS.map((item) => {
-            const active = "active" in item && item.active;
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "shrink-0 rounded-full px-[14px] py-[8px] text-[13px] leading-[1.5] whitespace-nowrap transition-colors lg:px-[17px] lg:py-[11px]",
-                  active ? "bg-[#ff5e7a] font-semibold text-white" : "text-[#9496bf] hover:text-white",
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-        <div className="flex items-center gap-4 lg:gap-[22px]">
-          <button type="button" aria-label="Search" className="relative size-[18px] shrink-0">
-            <Icon name="search" width={16} height={16} className="absolute top-0 left-0" />
-          </button>
-          <button type="button" aria-label="Notifications" className="relative size-[18px] shrink-0">
-            <Icon name="notifications" width={18} height={13.5} className="absolute top-0 left-0" />
-          </button>
-          <AccountMenu />
-        </div>
-      </header>
-
+    <div className={cn("mx-auto flex w-full max-w-[1440px] flex-1 flex-col text-white", className)}>
       {/* Workspace */}
       <div
         className={cn("flex w-full flex-1 flex-col gap-6 pt-7 pb-8 sm:gap-7 sm:pt-9", gutterClass)}
@@ -469,32 +407,6 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
             </div>
           </section>
         </div>
-      </div>
-
-      {/* Learning loop */}
-      <div className={cn("flex w-full pb-6 sm:pb-9", gutterClass)}>
-        <nav
-          aria-label="Learning loop"
-          className="flex min-w-0 flex-1 items-center gap-6 overflow-x-auto rounded-[18px] bg-[rgba(19,20,48,0.69)] px-[22px] py-4 sm:rounded-[22px] xl:h-[58px] xl:justify-between xl:py-0"
-        >
-          <p className={cn(eyebrowClass, "shrink-0")}>IT ALL CONNECTS</p>
-          {LEARNING_STEPS.map((step, i) => {
-            const last = i === LEARNING_STEPS.length - 1;
-            const label = `${String(i + 1).padStart(2, "0")}  /  ${step}`;
-            return last ? (
-              <p key={step} aria-current="step" className="shrink-0 text-[11px] leading-[1.5] font-semibold whitespace-pre text-[#ff5e7a]">
-                {label}
-              </p>
-            ) : (
-              <div key={step} className="flex shrink-0 items-center gap-2.5 leading-[1.5] text-[#9496bf]">
-                <p className="text-[11px] whitespace-pre">{label}</p>
-                <span aria-hidden className="text-[14px]">
-                  →
-                </span>
-              </div>
-            );
-          })}
-        </nav>
       </div>
     </div>
   );
