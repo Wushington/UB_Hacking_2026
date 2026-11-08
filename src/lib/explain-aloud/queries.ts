@@ -1,22 +1,48 @@
 import "server-only";
-import { and, asc, count, desc, eq, isNull, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { presignDownload } from "@/lib/storage";
 import { emptyView, toExplainAloudView, type ConceptOption, type ExplainAloudView, type SelectedConcept } from "./view";
 
-const { audioRecordings, lectures, categories, explanationFeedback, explanationWeakPoints, transcriptSegments, weakConcepts } =
-  schema;
+const {
+  audioRecordings,
+  lectures,
+  categories,
+  explanationFeedback,
+  explanationWeakPoints,
+  flashcards,
+  studyReviewEvents,
+  transcriptSegments,
+  weakConceptSources,
+  weakConcepts,
+} = schema;
+
+/** Each weak concept's most recently missed flashcard question. Concepts from recordings alone have none. */
+async function latestMissedQuestions(userId: string, conceptIds: string[]): Promise<Map<string, string>> {
+  if (conceptIds.length === 0) return new Map();
+  const rows = await getDb()
+    .select({ weakConceptId: weakConceptSources.weakConceptId, question: flashcards.question })
+    .from(weakConceptSources)
+    .innerJoin(studyReviewEvents, and(eq(studyReviewEvents.id, weakConceptSources.sourceId), eq(studyReviewEvents.userId, userId)))
+    .innerJoin(flashcards, eq(flashcards.id, studyReviewEvents.flashcardId))
+    .where(and(eq(weakConceptSources.sourceType, "study_review_event"), inArray(weakConceptSources.weakConceptId, conceptIds)))
+    .orderBy(asc(studyReviewEvents.reviewedAt));
+  // Oldest first, so the latest miss for a concept wins.
+  return new Map(rows.map((r) => [r.weakConceptId, r.question]));
+}
 
 /** The user's open weak concepts across their classes, most recent first, for the recorder's picker. */
 export async function getOpenConceptOptions(userId: string): Promise<ConceptOption[]> {
-  return getDb()
+  const options = await getDb()
     .select({ id: weakConcepts.id, conceptKey: weakConcepts.conceptKey, label: weakConcepts.label, lectureId: weakConcepts.lectureId })
     .from(weakConcepts)
     .innerJoin(lectures, and(eq(lectures.id, weakConcepts.lectureId), eq(lectures.userId, userId)))
     .where(and(eq(weakConcepts.userId, userId), isNull(weakConcepts.resolvedAt)))
     .orderBy(desc(weakConcepts.lastSeenAt))
     .limit(200);
+  const questions = await latestMissedQuestions(userId, options.map((o) => o.id));
+  return options.map((o) => ({ ...o, question: questions.get(o.id) ?? null }));
 }
 
 /**
@@ -39,7 +65,9 @@ export async function getSelectedConcept(userId: string, weakConceptId: string):
     .leftJoin(categories, eq(categories.id, lectures.categoryId))
     .where(and(eq(weakConcepts.id, id), eq(weakConcepts.userId, userId), isNull(weakConcepts.resolvedAt)))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  const questions = await latestMissedQuestions(userId, [id]);
+  return { ...row, question: questions.get(id) ?? null };
 }
 
 /** The user's classes, most recently updated first, for the recorder's class picker. */

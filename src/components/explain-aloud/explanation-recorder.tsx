@@ -399,6 +399,12 @@ export function ExplanationRecorder({
 						</p>
 					:	null}
 
+					{concept?.question ?
+						<p className="text-[15px] leading-[1.5] break-words text-white">
+							“{concept.question}”
+						</p>
+					:	null}
+
 					{phase === "requesting" ?
 						<p className="text-[13px] leading-[1.5] text-[#c1bedf]">
 							Waiting for microphone permission…

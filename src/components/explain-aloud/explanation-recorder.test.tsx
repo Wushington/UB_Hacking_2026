@@ -140,8 +140,8 @@ describe("ExplanationRecorder", () => {
   it("asks which weak concept to explain, and uploads the choice", async () => {
     uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
     const concepts = [
-      { id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: LECTURES[0].id },
-      { id: "c2", conceptKey: "light-reactions", label: "Light reactions", lectureId: LECTURES[1].id },
+      { id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: LECTURES[0].id, question: null },
+      { id: "c2", conceptKey: "light-reactions", label: "Light reactions", lectureId: LECTURES[1].id, question: null },
     ];
     renderRecorder({ concepts });
     await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
@@ -162,9 +162,31 @@ describe("ExplanationRecorder", () => {
     expect(uploadExplanation.mock.calls[0][0]).toMatchObject({ conceptKey: "oxygen-final-electron-acceptor" });
   });
 
+  it("keeps the question on screen while recording", async () => {
+    const concepts = [{ id: "c1", conceptKey: "oxygen", label: "Role of oxygen", lectureId: LECTURES[0].id, question: "What does oxygen do in the chain?" }];
+    renderRecorder({ concepts, defaultConceptKey: "oxygen" });
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
+    await screen.findByRole("button", { name: /stop/i });
+    expect(screen.getByText("Role of oxygen")).toBeInTheDocument();
+    expect(screen.getByText("“What does oxygen do in the chain?”")).toBeInTheDocument();
+  });
+
+  it("shows the question for the concept picked in the setup step", async () => {
+    const concepts = [
+      { id: "c1", conceptKey: "oxygen", label: "Role of oxygen", lectureId: LECTURES[0].id, question: "What does oxygen do in the chain?" },
+      { id: "c2", conceptKey: "atp", label: "ATP yield", lectureId: LECTURES[0].id, question: null },
+    ];
+    renderRecorder({ concepts });
+    await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
+    await userEvent.selectOptions(screen.getByLabelText(/which concept/i), "oxygen");
+    expect(screen.getByText("“What does oxygen do in the chain?”")).toBeInTheDocument();
+    await userEvent.selectOptions(screen.getByLabelText(/which concept/i), "atp");
+    expect(screen.queryByText(/what does oxygen do/i)).toBeNull();
+  });
+
   it("starts right away on a preselected concept and keeps it", async () => {
     uploadExplanation.mockResolvedValue("3a2b1c0d-9e8f-4a7b-8c6d-5e4f3a2b1c0d");
-    const concepts = [{ id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: LECTURES[0].id }];
+    const concepts = [{ id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: LECTURES[0].id, question: null }];
     renderRecorder({ concepts, defaultConceptKey: "oxygen-final-electron-acceptor" });
     await userEvent.click(screen.getByRole("button", { name: /record explanation/i }));
     expect(await screen.findByRole("button", { name: /stop/i })).toBeInTheDocument();

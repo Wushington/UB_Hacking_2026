@@ -65,7 +65,7 @@ function Capture() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <Link href="/capture" className={cn(primaryButton, "h-12 px-6 text-[14px]")}>
           <Upload aria-hidden className="size-[18px]" />
-          Upload Whiteboard Photos
+          Upload Photos
         </Link>
         <button
           type="button"
