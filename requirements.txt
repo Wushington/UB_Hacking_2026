@@ -7,3 +7,4 @@ pydantic
 pillow
 numpy
 opencv-python-headless
+pillow-heif

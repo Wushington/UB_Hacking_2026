@@ -6,7 +6,7 @@ const MB = 1024 * 1024;
 
 /** Per-file size limits. Duration limits live in ./audio (MAX_RECORDING_MS). */
 export const MAX_UPLOAD_BYTES = {
-  lecture_image: 10 * MB,
+  lecture_image: 20 * MB,
   lecture_audio: 50 * MB,
   explanation_audio: 10 * MB,
 } as const;

@@ -10,7 +10,7 @@ import { getObjectBytes } from "@/lib/storage";
 const { lectures, lectureImages, noteBlocks, noteSections } = schema;
 
 /**
- * POST /api/lectures/[id]/process — body: { imageIds } (2–5, in the student's order).
+ * POST /api/lectures/[id]/process — body: { imageIds } (1–5, in the student's order).
  * Sends the lecture's images to the AI service and saves the generated notes.
  * Returns ProcessedNotes (same shape as GET /api/lectures/[id]).
  */
@@ -49,7 +49,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/lectures/[i
     );
   if (rows.length !== imageIds.length) return problem(422, "Some images don't belong to this lecture");
   if (rows.some((r) => !(IMAGE_MIME_TYPES as readonly string[]).includes(r.mimeType))) {
-    return problem(422, "Images must be JPG, PNG or WebP");
+    return problem(422, "Images must be JPG, PNG, WebP or HEIC");
   }
 
   // Claim the lecture atomically so a double-click can't process it twice.

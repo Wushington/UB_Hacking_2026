@@ -7,7 +7,7 @@ import { parseEnv } from "@/lib/env";
  * Server-to-server only. Every other Gemini feature calls src/lib/gemini.ts directly.
  */
 
-/** Gemini on a 2–5 image batch, with retries on the Python side, can take a while. */
+/** Gemini on a 1–5 image batch, with retries on the Python side, can take a while. */
 const TIMEOUT_MS = 120_000;
 
 export interface NoteImage {

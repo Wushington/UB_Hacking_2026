@@ -4,6 +4,7 @@ import { finalizeUploadSchema, type FinalizeUploadResponse } from "@/contracts/u
 import { getDb, schema } from "@/db";
 import { jsonError, parseJson, userIdOr401 } from "@/lib/api";
 import { claimForGrading, runGrading } from "@/lib/explain-aloud/grade";
+import { finalizeLectureImage } from "@/lib/lectures/store";
 import { deleteObject, headObject, objectKeyFor } from "@/lib/storage";
 import { checkUploadedAudio, recordingPurposeFor } from "@/lib/uploads";
 import { ensureUser } from "@/lib/users";
@@ -15,7 +16,7 @@ export const maxDuration = 120;
 
 /**
  * Step 2 of an upload: checks the object really exists in the owner's namespace, validates what
- * was stored, and creates the media row. Idempotent: finalizing the same upload twice returns
+ * was stored, and creates the media row (lecture_images for whiteboard photos, audio_recordings otherwise). Idempotent: finalizing the same upload twice returns
  * the same row.
  */
 export async function POST(request: Request) {
@@ -25,9 +26,15 @@ export async function POST(request: Request) {
   const input = await parseJson(request, finalizeUploadSchema);
   if (input instanceof Response) return input;
 
+  if (input.purpose === "lecture_image") {
+    if (!input.lectureId) return jsonError(400, "lectureId: a photo must belong to a class");
+    const result = await finalizeLectureImage(userId, input.uploadId, input.lectureId);
+    if (!result.ok) return jsonError(result.status, result.error);
+    return Response.json({ id: result.id } satisfies FinalizeUploadResponse, { status: result.created ? 201 : 200 });
+  }
+
   const recordingPurpose = recordingPurposeFor(input.purpose);
-  // Whiteboard images are finalized by the Capture feature, which isn't built yet.
-  if (!recordingPurpose) return jsonError(501, "Image uploads aren't supported yet");
+  if (!recordingPurpose) return jsonError(400, "Unsupported upload purpose");
   if (recordingPurpose === "explanation" && !input.lectureId) {
     return jsonError(400, "lectureId: an explanation must belong to a class");
   }

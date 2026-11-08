@@ -32,9 +32,9 @@ app = FastAPI(
 )
 
 # Keep in sync with src/contracts/images.ts and src/contracts/uploads.ts.
-MIN_IMAGES, MAX_IMAGES = 2, 5
-MAX_IMAGE_BYTES = 10 * 1024 * 1024
-IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+MIN_IMAGES, MAX_IMAGES = 1, 5
+MAX_IMAGE_BYTES = 20 * 1024 * 1024
+IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"}
 
 
 @app.get("/health")
@@ -70,10 +70,10 @@ async def process_notes(
     jpegs = []
     for f in files:
         if f.content_type not in IMAGE_MIME_TYPES:
-            raise HTTPException(415, "Images must be JPG, PNG or WebP")
+            raise HTTPException(415, "Images must be JPG, PNG, WebP or HEIC")
         data = await f.read()
         if len(data) > MAX_IMAGE_BYTES:
-            raise HTTPException(413, "Image too large (10 MB max)")
+            raise HTTPException(413, "Image too large (20 MB max)")
         try:
             # OpenCV work is CPU-bound; keep it off the event loop.
             jpegs.append(await asyncio.to_thread(preprocess, data, enhance))

@@ -9,6 +9,9 @@ import io
 import cv2
 import numpy as np
 from PIL import Image, ImageOps
+from pillow_heif import register_heif_opener
+
+register_heif_opener()  # lets Image.open read HEIC/HEIF (iPhone photos)
 
 MAX_SIDE = 2048  # big enough for small handwriting, small enough to upload fast
 
