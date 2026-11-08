@@ -64,7 +64,13 @@ export async function getExplainAloudView(userId: string, recordingId?: string):
     : Promise.resolve([{ n: 1 }]);
 
   const feedbackQuery = db
-    .select({ id: explanationFeedback.id, transcriptText: explanationFeedback.transcriptText })
+    .select({
+      id: explanationFeedback.id,
+      transcriptText: explanationFeedback.transcriptText,
+      summary: explanationFeedback.summary,
+      coveredIdeas: explanationFeedback.coveredIdeas,
+      nextStep: explanationFeedback.nextStep,
+    })
     .from(explanationFeedback)
     .where(and(eq(explanationFeedback.recordingId, recording.id), eq(explanationFeedback.userId, userId)))
     .limit(1);

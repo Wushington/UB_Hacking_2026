@@ -35,7 +35,7 @@ export type ExplainAloudView = {
   /** e.g. "Nov 7"; formatted on the server so it can't cause a hydration mismatch. */
   recordedLabel: string | null;
   feedback: {
-    /** Not produced by Gemini yet; null until the contract stores them. */
+    /** Null for feedback saved before these coaching fields existed. */
     summary: string | null;
     covered: string[];
     gaps: ExplainAloudGap[];
@@ -101,7 +101,12 @@ export type ExplainAloudRows = {
   lecture: { title: string } | null;
   categoryName: string | null;
   attemptNumber: number;
-  feedback: { transcriptText: string } | null;
+  feedback: {
+    transcriptText: string;
+    summary?: string | null;
+    coveredIdeas?: string[] | null;
+    nextStep?: string | null;
+  } | null;
   weakPoints: { label: string; explanation: string }[];
   segments: { text: string }[];
   audioSrc: string | null;
@@ -161,10 +166,10 @@ export function toExplainAloudView(rows: ExplainAloudRows): ExplainAloudView {
     recordedLabel: rows.recording.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
     feedback: rows.feedback
       ? {
-          summary: null,
-          covered: [],
+          summary: rows.feedback.summary?.trim() || null,
+          covered: (rows.feedback.coveredIdeas ?? []).map((c) => c.trim()).filter(Boolean),
           gaps: rows.weakPoints.map((w) => ({ title: w.label, detail: w.explanation })),
-          nextStep: null,
+          nextStep: rows.feedback.nextStep?.trim() || null,
         }
       : null,
   };

@@ -37,6 +37,26 @@ describe("toExplainAloudView", () => {
     expect(view.feedback?.nextStep).toBeNull();
   });
 
+  it("maps the coaching fields when present", () => {
+    const view = toExplainAloudView(
+      rows({
+        feedback: {
+          transcriptText: "text",
+          summary: " Good start. ",
+          coveredIdeas: ["NADH supplies electrons.", " "],
+          nextStep: "Finish with oxygen.",
+        },
+      }),
+    );
+    expect(view.feedback).toMatchObject({
+      summary: "Good start.",
+      covered: ["NADH supplies electrons."],
+      nextStep: "Finish with oxygen.",
+    });
+    expect(feedbackSpeechText(view)).toContain("Good start. What you covered: NADH supplies electrons.");
+    expect(feedbackSpeechText(view)).toMatch(/Try this next\. Finish with oxygen\.$/);
+  });
+
   it("keeps feedback with no weak points", () => {
     const view = toExplainAloudView(rows({ weakPoints: [] }));
     expect(view.state).toBe("ready");

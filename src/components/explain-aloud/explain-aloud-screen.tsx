@@ -7,6 +7,7 @@ import { feedbackSpeechText, type ExplainAloudState, type ExplainAloudView } fro
 import { cn } from "@/lib/utils";
 import { AccountMenu } from "./account-menu";
 import { ExplanationRecorder, type LectureOption } from "./explanation-recorder";
+import { GradingWatcher, RetryGradingButton } from "./grading-status";
 import { ListenButton } from "./listen-button";
 
 const ASSETS = "/figma/explain-aloud";
@@ -343,9 +344,11 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 {listenRecordingId ? <ListenButton recordingId={listenRecordingId} /> : null}
+                {state === "failed" && view.recordingId ? <RetryGradingButton recordingId={view.recordingId} /> : null}
                 <FeedbackStatus state={state} />
               </div>
             </div>
+            {state === "processing" && view.recordingId ? <GradingWatcher recordingId={view.recordingId} /> : null}
             {feedback?.summary ? (
               <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{feedback.summary}</p>
             ) : null}
@@ -364,7 +367,11 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
                   ))}
                 </ul>
               ) : (
-                <Placeholder bordered={false}>Ideas you explained well will show up here.</Placeholder>
+                <Placeholder bordered={false}>
+                  {feedback?.summary
+                    ? "No ideas from the notes came through clearly yet. Try the step below."
+                    : "Ideas you explained well will show up here."}
+                </Placeholder>
               )}
             </div>
 
@@ -388,7 +395,7 @@ export function ExplainAloudScreen({ view, lectures = [], className, backHref = 
             </div>
 
             <div className="flex w-full flex-col gap-2.5">
-              <p className={eyebrowClass}>TRY THIS NEXT</p>
+              <p className={eyebrowClass}>TRY THIS NEXT{feedback?.nextStep ? " · 45–60 SECONDS" : ""}</p>
               {feedback?.nextStep ? (
                 <p className="text-[14px] leading-[1.5] text-white">{feedback.nextStep}</p>
               ) : (

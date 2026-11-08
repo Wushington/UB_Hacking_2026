@@ -1,12 +1,17 @@
 import { and, eq } from "drizzle-orm";
+import { after } from "next/server";
 import { finalizeUploadSchema, type FinalizeUploadResponse } from "@/contracts/uploads";
 import { getDb, schema } from "@/db";
 import { jsonError, parseJson, userIdOr401 } from "@/lib/api";
+import { claimForGrading, runGrading } from "@/lib/explain-aloud/grade";
 import { deleteObject, headObject, objectKeyFor } from "@/lib/storage";
 import { checkUploadedAudio, recordingPurposeFor } from "@/lib/uploads";
 import { ensureUser } from "@/lib/users";
 
 const { audioRecordings, lectures } = schema;
+
+/** Explanation grading runs in after() from this route. */
+export const maxDuration = 120;
 
 /**
  * Step 2 of an upload: checks the object really exists in the owner's namespace, validates what
@@ -88,6 +93,15 @@ export async function POST(request: Request) {
         .limit(1)
     )[0]?.id;
   if (!id) return jsonError(409, "Upload could not be saved");
+
+  // Explanations are graded right away, after the response so the browser isn't kept waiting.
+  // If this is lost (e.g. a restart), the page's poller re-triggers it via /grade.
+  if (row && recordingPurpose === "explanation") {
+    after(async () => {
+      const result = await claimForGrading(userId, row.id);
+      if (result.claimed) await runGrading(result.claimed);
+    });
+  }
 
   return Response.json({ id } satisfies FinalizeUploadResponse, { status: row ? 201 : 200 });
 }
