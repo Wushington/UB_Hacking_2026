@@ -7,6 +7,16 @@ import { emptyView, toExplainAloudView, type ExplainAloudView } from "./view";
 
 const { audioRecordings, lectures, categories, explanationFeedback, explanationWeakPoints, transcriptSegments } = schema;
 
+/** The user's classes, most recently updated first, for the recorder's class picker. */
+export async function getLectureOptions(userId: string): Promise<{ id: string; title: string }[]> {
+  return getDb()
+    .select({ id: lectures.id, title: lectures.title })
+    .from(lectures)
+    .where(eq(lectures.userId, userId))
+    .orderBy(desc(lectures.updatedAt))
+    .limit(100);
+}
+
 /**
  * Loads one of the user's explanation attempts: `recordingId` if given (and owned), otherwise
  * the latest. Every query is scoped to `userId`, or to a parent row already verified as theirs.

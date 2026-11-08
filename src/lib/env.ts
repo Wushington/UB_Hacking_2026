@@ -20,6 +20,12 @@ const schemas = {
   gemini: z.object({
     GEMINI_API_KEY: required,
   }),
+  elevenlabs: z.object({
+    ELEVENLABS_API_KEY: required,
+    /** Premade voice used in the ElevenLabs docs; override with any voice id from your account. */
+    ELEVENLABS_VOICE_ID: required.default("JBFqnCBsd6RMkjVDRZzb"),
+    ELEVENLABS_MODEL_ID: required.default("eleven_flash_v2_5"),
+  }),
   storage: z.object({
     VULTR_S3_ENDPOINT: z.url(),
     VULTR_S3_REGION: required,

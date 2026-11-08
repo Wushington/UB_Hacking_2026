@@ -17,6 +17,10 @@ export type ExplainAloudGap = { title: string; detail: string };
 
 export type ExplainAloudView = {
   state: ExplainAloudState;
+  /** The explanation recording shown; null for placeholder views. */
+  recordingId: string | null;
+  /** The class that attempt belongs to; new attempts default to it. */
+  lectureId: string | null;
   /** Category name, shown as the course chip. */
   course: string | null;
   concept: {
@@ -40,14 +44,60 @@ export type ExplainAloudView = {
 };
 
 export function emptyView(state: ExplainAloudState): ExplainAloudView {
-  return { state, course: null, concept: null, recording: null, transcript: null, recordedLabel: null, feedback: null };
+  return {
+    state,
+    recordingId: null,
+    lectureId: null,
+    course: null,
+    concept: null,
+    recording: null,
+    transcript: null,
+    recordedLabel: null,
+    feedback: null,
+  };
+}
+
+/** ElevenLabs bills per character; keep a single read-aloud bounded. */
+export const MAX_SPEECH_CHARS = 2500;
+
+function sentence(text: string) {
+  const t = text.trim();
+  return /[.!?…]$/.test(t) ? t : `${t}.`;
+}
+
+/**
+ * Script read aloud by the feedback "Listen" button. Built on the server from the user's own
+ * feedback (the client never sends text). Null when there is nothing to read.
+ */
+export function feedbackSpeechText(view: ExplainAloudView): string | null {
+  const { feedback } = view;
+  if (view.state !== "ready" || !feedback) return null;
+
+  const parts: string[] = [];
+  if (feedback.summary) parts.push(sentence(feedback.summary));
+  if (feedback.covered.length > 0) {
+    parts.push("What you covered:", ...feedback.covered.map(sentence));
+  }
+  if (feedback.gaps.length > 0) {
+    parts.push(feedback.gaps.length === 1 ? "One thing is still missing." : `${feedback.gaps.length} things are still missing.`);
+    for (const gap of feedback.gaps) parts.push(sentence(gap.title), sentence(gap.detail));
+  } else {
+    parts.push("No gaps were found in this explanation. Nice work.");
+  }
+  if (feedback.nextStep) parts.push("Try this next.", sentence(feedback.nextStep));
+
+  const intro = view.concept ? `Here’s your feedback on ${sentence(view.concept.title)}` : "Here’s your feedback.";
+  const script = [intro, ...parts].join(" ");
+  if (script.length <= MAX_SPEECH_CHARS) return script;
+  const cut = script.slice(0, MAX_SPEECH_CHARS);
+  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
 }
 
 type RecordingStatus = (typeof RECORDING_STATUSES)[number];
 
 /** Rows read for one explanation attempt (see queries.ts). All already scoped to the owner. */
 export type ExplainAloudRows = {
-  recording: { status: RecordingStatus; durationMs: number | null; createdAt: Date };
+  recording: { id: string; lectureId: string | null; status: RecordingStatus; durationMs: number | null; createdAt: Date };
   lecture: { title: string } | null;
   categoryName: string | null;
   attemptNumber: number;
@@ -94,6 +144,8 @@ export function toExplainAloudView(rows: ExplainAloudRows): ExplainAloudView {
 
   return {
     state,
+    recordingId: rows.recording.id,
+    lectureId: rows.lecture ? rows.recording.lectureId : null,
     course: rows.categoryName?.trim() || null,
     concept: {
       title,

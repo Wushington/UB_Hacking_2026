@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { emptyView, type ExplainAloudView } from "@/lib/explain-aloud/view";
 import { ExplainAloudScreen } from "./explain-aloud-screen";
+
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 
 vi.mock("@clerk/nextjs", () => ({
   useUser: () => ({ isLoaded: true, isSignedIn: false, user: null }),
@@ -12,6 +13,8 @@ vi.mock("@clerk/nextjs", () => ({
 
 const readyView: ExplainAloudView = {
   state: "ready",
+  recordingId: "7d1f3c1e-2b8a-4c3e-9f4a-1a2b3c4d5e6f",
+  lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c",
   course: "Biology",
   concept: {
     title: "Cellular respiration",
@@ -47,6 +50,12 @@ describe("ExplainAloudScreen", () => {
     expect(screen.getByText("Ideas you explained well will show up here.")).toBeInTheDocument();
     expect(screen.getByText("A suggested next attempt will appear here.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Play recording" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /listen feedback read aloud/i })).toBeInTheDocument();
+  });
+
+  it("hides Listen when there is no feedback to read", () => {
+    render(<ExplainAloudScreen view={{ ...readyView, state: "processing", feedback: null }} />);
+    expect(screen.queryByRole("button", { name: /listen/i })).not.toBeInTheDocument();
   });
 
   it("says no gaps were found when feedback has no weak points", () => {
@@ -58,6 +67,7 @@ describe("ExplainAloudScreen", () => {
     const { container } = render(<ExplainAloudScreen view={emptyView(state)} />);
     expect(container.querySelectorAll("[data-placeholder]").length).toBeGreaterThanOrEqual(4);
     for (const filler of FIGMA_FILLER) expect(container.textContent).not.toMatch(filler);
+    expect(screen.queryByRole("button", { name: /listen/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/Recorded/)).not.toBeInTheDocument();
   });
 
@@ -79,10 +89,14 @@ describe("ExplainAloudScreen", () => {
     ).toBeInTheDocument();
   });
 
-  it("calls onRecordAgain when recording another attempt", async () => {
-    const onRecordAgain = vi.fn();
-    render(<ExplainAloudScreen view={readyView} onRecordAgain={onRecordAgain} />);
-    await userEvent.click(screen.getByRole("button", { name: /record another attempt/i }));
-    expect(onRecordAgain).toHaveBeenCalledOnce();
+  it("enables recording another attempt when the user has a class", () => {
+    render(<ExplainAloudScreen view={readyView} lectures={[{ id: readyView.lectureId!, title: "Cellular respiration" }]} />);
+    expect(screen.getByRole("button", { name: /record another attempt/i })).toBeEnabled();
+  });
+
+  it("disables recording until the user has a class", () => {
+    render(<ExplainAloudScreen view={emptyView("empty")} lectures={[]} />);
+    expect(screen.getByRole("button", { name: /record an explanation/i })).toBeDisabled();
+    expect(screen.getByText(/add a class first/i)).toBeInTheDocument();
   });
 });

@@ -3,17 +3,20 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
-import type { ExplainAloudState, ExplainAloudView } from "@/lib/explain-aloud/view";
+import { feedbackSpeechText, type ExplainAloudState, type ExplainAloudView } from "@/lib/explain-aloud/view";
 import { cn } from "@/lib/utils";
 import { AccountMenu } from "./account-menu";
+import { ExplanationRecorder, type LectureOption } from "./explanation-recorder";
+import { ListenButton } from "./listen-button";
 
 const ASSETS = "/figma/explain-aloud";
 
 export type ExplainAloudScreenProps = {
   view: ExplainAloudView;
+  /** The user's classes, for choosing which one a new explanation belongs to. */
+  lectures?: LectureOption[];
   className?: string;
   backHref?: string;
-  onRecordAgain?: () => void;
 };
 
 const NAV_ITEMS = [
@@ -199,12 +202,13 @@ function FeedbackStatus({ state }: { state: ExplainAloudState }) {
   return null;
 }
 
-export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts", onRecordAgain }: ExplainAloudScreenProps) {
+export function ExplainAloudScreen({ view, lectures = [], className, backHref = "/weak-concepts" }: ExplainAloudScreenProps) {
   const { state, course, concept, recording, transcript, recordedLabel, feedback } = view;
   const intro = INTRO[state];
   const hasAttempt = concept !== null;
   const gaps = feedback?.gaps ?? [];
   const covered = feedback?.covered ?? [];
+  const listenRecordingId = feedbackSpeechText(view) !== null ? view.recordingId : null;
 
   return (
     <div className={cn("relative isolate flex min-h-dvh w-full flex-col overflow-hidden bg-[#0d0e2a] text-white", className)}>
@@ -321,20 +325,13 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
               ) : null}
             </section>
 
-            <div className="flex w-full flex-col-reverse items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <Link href={backHref} className="text-[12px] leading-[1.5] text-[#ff5e7a] hover:underline">
-                ← Back to weak concepts
-              </Link>
-              <button
-                type="button"
-                onClick={onRecordAgain}
-                disabled={state === "signed-out" || state === "loading"}
-                className="flex h-[46px] w-full items-center justify-center gap-[9px] rounded-[12px] sm:w-auto bg-[#ff5e7a] px-[18px] text-[13px] leading-[1.5] font-semibold whitespace-nowrap text-white transition-colors hover:bg-[#ff7790] disabled:cursor-default disabled:opacity-50 disabled:hover:bg-[#ff5e7a]"
-              >
-                <Icon name="mic" width={18} height={18} />
-                {hasAttempt ? "Record another attempt" : "Record an explanation"}
-              </button>
-            </div>
+            <ExplanationRecorder
+              lectures={lectures}
+              defaultLectureId={view.lectureId}
+              disabled={state === "signed-out" || state === "loading"}
+              hasAttempt={hasAttempt}
+              backHref={backHref}
+            />
           </div>
 
           {/* AI feedback */}
@@ -344,7 +341,10 @@ export function ExplainAloudScreen({ view, className, backHref = "/weak-concepts
                 <Icon name="sparkles" width={22} height={22} />
                 <h2 className="text-[18px] leading-[1.5] font-medium sm:text-[21px]">A little feedback from AI</h2>
               </div>
-              <FeedbackStatus state={state} />
+              <div className="flex flex-wrap items-center gap-2">
+                {listenRecordingId ? <ListenButton recordingId={listenRecordingId} /> : null}
+                <FeedbackStatus state={state} />
+              </div>
             </div>
             {feedback?.summary ? (
               <p className="w-full text-[14px] leading-[1.5] text-[#c1bedf]">{feedback.summary}</p>

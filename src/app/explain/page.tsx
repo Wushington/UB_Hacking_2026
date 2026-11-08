@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import { ExplainAloudScreen } from "@/components/explain-aloud/explain-aloud-screen";
-import { getExplainAloudView } from "@/lib/explain-aloud/queries";
+import { getExplainAloudView, getLectureOptions } from "@/lib/explain-aloud/queries";
 import { emptyView } from "@/lib/explain-aloud/view";
 
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
@@ -19,8 +19,8 @@ async function ExplainAloudContent({ searchParams }: { searchParams: PageProps<"
 
   const { recording } = await searchParams;
   const recordingId = typeof recording === "string" ? recording : undefined;
-  const view = await getExplainAloudView(userId, recordingId);
-  return <ExplainAloudScreen view={view} className={inter.className} />;
+  const [view, lectures] = await Promise.all([getExplainAloudView(userId, recordingId), getLectureOptions(userId)]);
+  return <ExplainAloudScreen view={view} lectures={lectures} className={inter.className} />;
 }
 
 export default function ExplainAloudPage({ searchParams }: PageProps<"/explain">) {
