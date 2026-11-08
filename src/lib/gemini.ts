@@ -2,13 +2,20 @@ import "server-only";
 import { GoogleGenAI } from "@google/genai";
 import { parseEnv } from "@/lib/env";
 
+const models = parseEnv("geminiModels");
+
 /**
- * Model for flashcard/audio/feedback generation, from GEMINI_MODEL (shared with src/ai-service).
- * Use this, not a model id per call site.
+ * Primary model for every Gemini call, from GEMINI_MODEL (shared with src/ai-service; defaults to
+ * the -latest alias). Use this, not a model id per call site.
  */
-export function geminiModel(): string {
-  return parseEnv("gemini").GEMINI_MODEL;
-}
+export const GEMINI_MODEL: string = models.GEMINI_MODEL;
+
+/**
+ * Tried in order when the primary model is overloaded, rate-limited or hangs (newest models
+ * see demand spikes). Same family and capabilities (audio input, JSON schema output).
+ * Override with GEMINI_FALLBACK_MODELS (comma-separated).
+ */
+export const GEMINI_FALLBACK_MODELS: readonly string[] = models.GEMINI_FALLBACK_MODELS;
 
 let client: GoogleGenAI | undefined;
 
