@@ -76,6 +76,13 @@ describe("SiteShell", () => {
     }
   });
 
+  // Page sections animate in with a lasting transform, which stacks them above an unpositioned header,
+  // so the account menu (Sign out) would open underneath them and swallow the click.
+  it("stacks the navbar above page content so its menus open on top", () => {
+    renderShell("/");
+    expect(screen.getByRole("banner")).toHaveClass("relative", "z-40");
+  });
+
   it("links Quizzes to the flashcard decks page", () => {
     renderShell("/");
     const main = screen.getByRole("navigation", { name: "Main" });
