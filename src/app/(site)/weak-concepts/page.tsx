@@ -3,6 +3,8 @@ import { Suspense } from "react";
 import { HowItWorks } from "@/components/orbit/how-it-works";
 import { OrbitPage, OrbitPageHeading } from "@/components/orbit/shell";
 import { requireUserId, UnauthorizedError } from "@/lib/auth";
+import { listLectures } from "@/lib/lectures/store";
+import { listDividers, listSubjects } from "@/lib/subjects/store";
 import { listWeakConcepts } from "@/lib/weak-concepts/store";
 import { WeakConceptsList } from "./weak-concepts-list";
 
@@ -20,7 +22,8 @@ async function WeakConcepts() {
     if (error instanceof UnauthorizedError) return <p className="text-muted-foreground">Sign in to see your weak concepts.</p>;
     throw error;
   }
-  return <WeakConceptsList concepts={await listWeakConcepts(userId)} />;
+  const [concepts, lectures, subjects, dividers] = await Promise.all([listWeakConcepts(userId), listLectures(userId), listSubjects(userId), listDividers(userId)]);
+  return <WeakConceptsList concepts={concepts} lectures={lectures} subjects={subjects} dividers={dividers} />;
 }
 
 export default function Page() {

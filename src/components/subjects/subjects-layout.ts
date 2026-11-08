@@ -57,3 +57,17 @@ export function buildSubjectsLayout<L extends SubjectLecture>(lectures: L[], sub
     dividers: ordered.map((divider) => ({ divider, subjects: sort(all.filter((g) => dividerOf.get(g.id) === divider.id)) })),
   };
 }
+
+export const UNORGANIZED = "unorganized";
+
+/** One selectable section of a page organized by divider. */
+export type DividerGroup<L extends SubjectLecture = SubjectLecture> = { key: string; name: string; subjects: SubjectGroup<L>[] };
+
+/** The layout as selectable sections: Unorganized (notes with no subject, then subjects with no divider), then each divider. */
+export function dividerGroups<L extends SubjectLecture>(layout: SubjectsLayout<L>): DividerGroup<L>[] {
+  const noSubject = layout.noSubject.length ? [{ id: "", name: "No Subject", lectures: layout.noSubject }] : [];
+  return [
+    { key: UNORGANIZED, name: "Unorganized", subjects: [...noSubject, ...layout.ungrouped] },
+    ...layout.dividers.map(({ divider, subjects }) => ({ key: divider.id, name: divider.name, subjects })),
+  ];
+}
