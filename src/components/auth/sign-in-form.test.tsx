@@ -62,6 +62,11 @@ describe("custom Clerk authentication", () => {
     await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
     expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_google", redirectCallbackUrl: "/sso-callback", redirectUrl: "/home" });
   });
+  it("starts GitHub OAuth with the local callback", async () => {
+    render(<SignInForm />);
+    await userEvent.click(screen.getByRole("button", { name: /continue with github/i }));
+    expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_github", redirectCallbackUrl: "/sso-callback", redirectUrl: "/home" });
+  });
   it("recovers a password through email code verification", async () => {
     render(<SignInForm recovery />); const user = userEvent.setup();
     await user.type(screen.getByLabelText("Email address"), "student@example.com");
