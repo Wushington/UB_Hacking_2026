@@ -27,7 +27,7 @@ async function StudyPage({ params }: PageProps<"/lectures/[id]/study">) {
   const { lectureTitle, deck } = data;
   const cards = deck?.cards ?? [];
   return (
-    <div className="flex min-h-full flex-1 flex-col bg-[#0d0e2a] text-[#e8e6ff]">
+    <div className="flex flex-1 flex-col text-[#e8e6ff]">
       <div className="mx-auto w-full max-w-[1328px] px-4 pt-9 sm:px-14">
         <FlashcardGenerator lectureId={id} hasExistingDeck={deck !== null} />
       </div>
@@ -59,7 +59,7 @@ async function StudyPage({ params }: PageProps<"/lectures/[id]/study">) {
 
 export default function Page(props: PageProps<"/lectures/[id]/study">) {
   return (
-    <Suspense fallback={<p role="status" className="min-h-full bg-[#0d0e2a] p-8 text-[#c1bedf]">Loading your flashcards…</p>}>
+    <Suspense fallback={<p role="status" className="p-8 text-[#c1bedf]">Loading your flashcards…</p>}>
       <StudyPage {...props} />
     </Suspense>
   );

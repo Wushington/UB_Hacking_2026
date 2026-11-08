@@ -76,7 +76,7 @@ export function StudySessionView({ deckTitle, subtitle, cards, onComplete, rando
   const score = scoreSession(session?.results ?? []);
 
   return (
-    <div className="min-h-full flex-1 bg-[#0d0e2a] text-[#e8e6ff]">
+    <div className="flex-1 text-[#e8e6ff]">
       <div className="mx-auto flex max-w-[1328px] flex-col gap-7 px-4 pt-9 pb-8 sm:px-14">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex flex-col gap-2">
