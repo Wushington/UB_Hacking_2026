@@ -1,13 +1,7 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { emptyDashboard, type DashboardView } from "@/lib/dashboard/view";
 import { DashboardScreen } from "./dashboard-screen";
-
-vi.mock("@clerk/nextjs", () => ({
-  useUser: () => ({ isLoaded: true, isSignedIn: false, user: null }),
-  useClerk: () => ({ openUserProfile: vi.fn(), signOut: vi.fn() }),
-  SignInButton: ({ children }: { children: React.ReactNode }) => children,
-}));
 
 const LECTURE = "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c";
 
@@ -22,19 +16,12 @@ const fullView: DashboardView = {
 };
 
 describe("DashboardScreen", () => {
-  it("shows the logo linking home and the main navigation", () => {
-    render(<DashboardScreen view={fullView} />);
-    const header = screen.getByRole("banner");
-    const brand = within(header).getByRole("link", { name: /orbit study/i });
-    expect(brand).toHaveAttribute("href", "/");
-    expect(within(brand).getByRole("img", { name: /orbit study logo/i })).toHaveAttribute("src", expect.stringContaining("orbit-study-logo.svg"));
-
-    const nav = screen.getByRole("navigation", { name: "Main" });
-    expect(within(nav).getByRole("link", { name: "Home" })).toHaveAttribute("aria-current", "page");
-    expect(within(nav).getByRole("link", { name: "Weak concepts" })).toHaveAttribute("href", "/weak-concepts");
-    // No routes exist yet for classes or quizzes: they are labelled, not dead links.
-    expect(within(nav).queryByRole("link", { name: /my classes|quizzes/i })).toBeNull();
-    expect(within(nav).getByText("My classes").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
+  it("renders only page content; the site shell owns the navbar, footer and background", () => {
+    const { container } = render(<DashboardScreen view={fullView} />);
+    expect(screen.queryByRole("banner")).toBeNull();
+    expect(screen.queryByRole("contentinfo")).toBeNull();
+    expect(screen.queryByRole("main")).toBeNull();
+    expect(container.querySelector("[data-star]")).toBeNull();
   });
 
   it("renders the user's own data", () => {
@@ -45,7 +32,7 @@ describe("DashboardScreen", () => {
     expect(screen.getByText("Organic Chemistry", { selector: "p" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /^stereochemistry/i })).toHaveAttribute("href", `/lectures/${LECTURE}/study`);
     expect(screen.getByRole("link", { name: /generate quiz/i })).toHaveAttribute("href", `/lectures/${LECTURE}/study`);
-    expect(screen.getByRole("link", { name: /chirality centers/i })).toHaveAttribute("href", "/weak-concepts");
+    expect(screen.getByRole("link", { name: /chirality centers/i })).toHaveAttribute("href", "/explain");
     expect(screen.getByRole("link", { name: /explain this concept/i })).toHaveAttribute("href", "/explain");
   });
 
@@ -65,26 +52,14 @@ describe("DashboardScreen", () => {
     expect(screen.getAllByText(/sign in/i).length).toBeGreaterThan(0);
   });
 
-  it("labels every control and marks unbuilt features as coming soon", () => {
+  it("labels every control and marks unbuilt capture as coming soon", () => {
     render(<DashboardScreen view={fullView} />);
-    for (const name of [/search/i, /notifications/i, /upload whiteboard photo/i, /upload lecture audio/i]) {
+    for (const name of [/upload whiteboard photo/i, /upload lecture audio/i]) {
       const control = screen.getByRole("button", { name });
       expect(control).toBeDisabled();
       expect(control).toHaveAccessibleName(/coming soon/i);
     }
     for (const button of screen.getAllByRole("button")) expect(button).toHaveAccessibleName();
     for (const link of screen.getAllByRole("link")) expect(link).toHaveAccessibleName();
-  });
-
-  it("shows the learning loop", () => {
-    render(<DashboardScreen view={fullView} />);
-    const loop = screen.getByRole("list", { name: /learning loop/i });
-    expect(within(loop).getAllByRole("listitem").map((li) => li.textContent)).toEqual([
-      "Capture a class",
-      "Organize notes",
-      "Take a quiz",
-      "Find the gaps",
-      "Explain & improve",
-    ]);
   });
 });

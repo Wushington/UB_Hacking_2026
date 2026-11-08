@@ -1,38 +1,23 @@
 import {
-  ArrowRight,
   ArrowUpRight,
   AudioLines,
   ChevronRight,
   Flame,
   ImageIcon,
-  ListChecks,
   Mic,
   NotebookTabs,
-  Orbit,
   ScanLine,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { DashboardView } from "@/lib/dashboard/view";
 import { cn } from "@/lib/utils";
-import { DashboardNavbar } from "./dashboard-navbar";
-
-/** Shared space backdrop, also used by /explain. */
-const BACKDROP = "/figma/explain-aloud";
-
-const LEARNING_LOOP: { label: string; icon: LucideIcon }[] = [
-  { label: "Capture a class", icon: ScanLine },
-  { label: "Organize notes", icon: NotebookTabs },
-  { label: "Take a quiz", icon: ListChecks },
-  { label: "Find the gaps", icon: Orbit },
-  { label: "Explain & improve", icon: Mic },
-];
 
 /** Decorative bars either side of the mic (mirrors the design; no audio is captured here). */
 const BARS = [7, 11, 18, 10, 23, 33, 19, 29, 15];
+const soundBar = "w-[3px] rounded-[3px] bg-orbit-chip motion-safe:animate-sound-bar";
 
 const card = "flex w-full flex-col rounded-[22px] bg-orbit-surface shadow-[0_6px_24px_rgb(0_0_0/0.19)]";
 const eyebrow = "text-[10px] font-semibold tracking-[1.5px] text-orbit-muted uppercase";
@@ -241,7 +226,7 @@ function WeakConcepts({ view }: { view: DashboardView }) {
         <ul className="flex flex-col gap-[3px]">
           {view.weakConcepts.map((concept, i) => (
             <li key={concept.id}>
-              <Link href="/weak-concepts" className="group flex items-center gap-2.5 rounded-xl px-3 py-[13px] transition-colors hover:bg-orbit-raised">
+              <Link href="/explain" className="group flex items-center gap-2.5 rounded-xl px-3 py-[13px] transition-colors hover:bg-orbit-raised">
                 <span aria-hidden className={cn("size-1.5 shrink-0 rounded-full", i === 0 ? "bg-orbit-accent-text" : "bg-orbit-muted/60")} />
                 <span className="flex min-w-0 flex-1 flex-col gap-1.5">
                   <span className="truncate text-[13px] text-orbit-text">{concept.label}</span>
@@ -253,7 +238,7 @@ function WeakConcepts({ view }: { view: DashboardView }) {
           ))}
         </ul>
       )}
-      <Link href="/weak-concepts" className={textLink}>
+      <Link href="/explain" className={textLink}>
         View weak concepts
         <ArrowUpRight aria-hidden className="size-3.5" />
       </Link>
@@ -274,13 +259,13 @@ function ExplainAloud({ view }: { view: DashboardView }) {
       </div>
       <div aria-hidden className="flex h-[52px] items-center justify-center gap-[5px]">
         {BARS.map((h, i) => (
-          <span key={`l${i}`} className="w-[3px] rounded-[3px] bg-orbit-chip" style={{ height: h }} />
+          <span key={`l${i}`} className={soundBar} style={{ height: h, animationDelay: `${-i * 0.18}s` }} />
         ))}
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-orbit-accent">
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-orbit-accent motion-safe:animate-mic-pulse">
           <Mic className="size-[22px] text-white" />
         </span>
         {[...BARS].reverse().map((h, i) => (
-          <span key={`r${i}`} className="w-[3px] rounded-[3px] bg-orbit-chip" style={{ height: h }} />
+          <span key={`r${i}`} className={soundBar} style={{ height: h, animationDelay: `${-(BARS.length - 1 - i) * 0.18}s` }} />
         ))}
       </div>
       <p className="truncate text-[11px] text-orbit-muted">{focus ? `Suggested: ${focus}` : "Pick any concept from your notes."}</p>
@@ -293,81 +278,44 @@ function ExplainAloud({ view }: { view: DashboardView }) {
   );
 }
 
-function LearningLoop() {
-  return (
-    <div className="flex w-full flex-col gap-3 rounded-[22px] bg-orbit-surface/45 px-5 py-[18px] lg:flex-row lg:items-center lg:justify-between">
-      <p className={eyebrow}>
-        It all connects
-      </p>
-      <ol aria-label="Learning loop" className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
-        {LEARNING_LOOP.map(({ label, icon: Icon }, i) => (
-          <li key={label} className="flex items-center gap-4 text-[12px] text-orbit-muted">
-            {i > 0 ? <ArrowRight aria-hidden className="size-3 text-orbit-muted/60" /> : null}
-            <span className="flex items-center gap-2">
-              <Icon aria-hidden className="size-[15px] text-orbit-accent-text" />
-              {label}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
 export function DashboardScreen({ view, className }: { view: DashboardView; className?: string }) {
   const name = view.signedIn && view.firstName ? `, ${view.firstName}` : "";
   const streak = view.stats.streakDays;
 
   return (
-    <div className={cn("relative isolate flex min-h-dvh w-full flex-col overflow-x-clip bg-orbit-bg text-white", className)}>
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        <div className="absolute top-0 left-1/2 h-[1080px] w-[1440px] -translate-x-1/2">
-          <Image src={`${BACKDROP}/star-field.svg`} alt="" fill className="max-w-none" />
+    <div className={cn("mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-[30px] px-4 pt-8 pb-9 sm:px-6 lg:px-10 lg:pt-[38px] xl:px-14", className)}>
+      <div className="flex flex-col gap-4 motion-safe:animate-rise sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-[9px]">
+          <p className={eyebrow}>Your space to understand</p>
+          <h1 className="text-[28px] leading-[1.15] font-medium tracking-[-1.3px] text-balance text-white sm:text-[36px]">
+            A little closer to your next aha{name}.
+          </h1>
+          <p className="text-[14px] text-orbit-muted">
+            {view.signedIn ? "Capture a class. Connect the dots. Make it stick." : "Sign in to capture classes, track quizzes and find your gaps."}
+          </p>
         </div>
-        <div className="absolute bottom-0 left-0 h-[440px] w-full opacity-40">
-          <Image src={`${BACKDROP}/lunar-atmosphere.jpg`} alt="" fill sizes="100vw" className="object-cover" />
-        </div>
-        <div className="absolute bottom-[180px] left-0 h-[260px] w-full bg-gradient-to-b from-orbit-bg to-transparent" />
+        {streak > 0 ? (
+          <p className="inline-flex shrink-0 items-center gap-2.5 self-start rounded-full bg-orbit-raised/60 px-[15px] py-[11px] text-[12px] font-medium text-orbit-text sm:self-auto">
+            <Flame aria-hidden className="size-[18px] text-orbit-accent-text" />
+            {streak}-day study streak
+          </p>
+        ) : null}
       </div>
 
-      <DashboardNavbar current="/" />
-
-      <main className="mx-auto flex w-full max-w-[1440px] flex-1 flex-col gap-[30px] px-4 pt-8 pb-9 sm:px-6 lg:px-10 lg:pt-[38px] xl:px-14">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-col gap-[9px]">
-            <p className={eyebrow}>Your space to understand</p>
-            <h1 className="text-[28px] leading-[1.15] font-medium tracking-[-1.3px] text-balance text-white sm:text-[36px]">
-              A little closer to your next aha{name}.
-            </h1>
-            <p className="text-[14px] text-orbit-muted">
-              {view.signedIn ? "Capture a class. Connect the dots. Make it stick." : "Sign in to capture classes, track quizzes and find your gaps."}
-            </p>
-          </div>
-          {streak > 0 ? (
-            <p className="inline-flex shrink-0 items-center gap-2.5 self-start rounded-full bg-orbit-raised/60 px-[15px] py-[11px] text-[12px] font-medium text-orbit-text sm:self-auto">
-              <Flame aria-hidden className="size-[18px] text-orbit-accent-text" />
-              {streak}-day study streak
-            </p>
-          ) : null}
+      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-[248px_minmax(0,1fr)_384px]">
+        <div className="flex flex-col gap-5 motion-safe:animate-rise md:col-span-2 xl:order-2 xl:col-span-1" style={{ animationDelay: "160ms" }}>
+          <Capture />
+          <RecentNotes view={view} />
+          <GenerateQuiz view={view} />
         </div>
-
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-[248px_minmax(0,1fr)_384px]">
-          <div className="flex flex-col gap-5 md:col-span-2 xl:order-2 xl:col-span-1">
-            <Capture />
-            <RecentNotes view={view} />
-            <GenerateQuiz view={view} />
-          </div>
-          <div className="xl:order-1">
-            <Overview view={view} />
-          </div>
-          <div className="flex flex-col gap-5 xl:order-3">
-            <WeakConcepts view={view} />
-            <ExplainAloud view={view} />
-          </div>
+        <div className="motion-safe:animate-rise xl:order-1" style={{ animationDelay: "80ms" }}>
+          <Overview view={view} />
         </div>
-
-        <LearningLoop />
-      </main>
+        <div className="flex flex-col gap-5 motion-safe:animate-rise xl:order-3" style={{ animationDelay: "240ms" }}>
+          <WeakConcepts view={view} />
+          <ExplainAloud view={view} />
+        </div>
+      </div>
     </div>
   );
 }
