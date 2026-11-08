@@ -92,7 +92,7 @@
   --card-foreground: #ecebff;
   --popover: #151632;
   --popover-foreground: #ecebff;
-  --primary: #e11d48;
+  --primary: #ff5e7a;
   --primary-foreground: #ffffff;
   --secondary: #1d1e44;
   --secondary-foreground: #ecebff;
@@ -100,10 +100,10 @@
   --muted-foreground: #9a9cc7;
   --accent: #1d1e44;
   --accent-foreground: #ecebff;
-  --destructive: #ff6b85;
+  --destructive: #ff5e7a;
   --border: rgb(72 74 159 / 0.38);
   --input: rgb(72 74 159 / 0.5);
-  --ring: #ff6b85;
+  --ring: #ff5e7a;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -130,7 +130,7 @@
     @apply font-sans;
   }
 }
-/* Orbit dark theme (dashboard). Accent fills carry white text at >= 4.5:1; accent-text is for links on dark surfaces. */
+/* Orbit dark theme. Accent #ff5e7a matches the logo mark. */
 @theme {
   --color-orbit-bg: #0c0d27;
   --color-orbit-surface: #151632;
@@ -140,9 +140,9 @@
   --color-orbit-line: rgb(72 74 159 / 0.38);
   --color-orbit-text: #ecebff;
   --color-orbit-muted: #9a9cc7;
-  --color-orbit-accent: #e11d48;
-  --color-orbit-accent-hover: #c8163d;
-  --color-orbit-accent-text: #ff6b85;
+  --color-orbit-accent: #ff5e7a;
+  --color-orbit-accent-hover: #ff7790;
+  --color-orbit-accent-text: #ff5e7a;
   --color-orbit-accent-soft: #3a1a2c;
   --color-orbit-success: #4ecba0;
   --color-orbit-success-soft: #163d33;
@@ -171,10 +171,10 @@
   }
   @keyframes mic-pulse {
     from {
-      box-shadow: 0 0 0 0 rgb(225 29 72 / 0.45);
+      box-shadow: 0 0 0 0 rgb(255 94 122 / 0.45);
     }
     to {
-      box-shadow: 0 0 0 14px rgb(225 29 72 / 0);
+      box-shadow: 0 0 0 14px rgb(255 94 122 / 0);
     }
   }
   @keyframes sound-bar {

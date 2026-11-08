@@ -1,6 +1,5 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -24,16 +23,17 @@ const isCurrent = (href: string, pathname: string) => (href === "/" ? pathname =
 
 const itemClass = "inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full px-4 text-[13px] whitespace-nowrap transition-colors";
 
-function ComingSoonIconButton({ label, children }: { label: string; children: React.ReactNode }) {
+/** Search and notifications use the Figma Home nav icons (public/figma/nav). */
+function ComingSoonIconButton({ label, icon }: { label: string; icon: string }) {
   return (
     <button
       type="button"
       disabled
       aria-label={`${label} (coming soon)`}
       title={`${label} is coming soon`}
-      className="flex size-10 items-center justify-center rounded-full text-orbit-muted disabled:cursor-not-allowed disabled:opacity-60"
+      className="flex size-10 cursor-not-allowed items-center justify-center rounded-full"
     >
-      {children}
+      <Image src={`/figma/nav/${icon}.svg`} alt="" width={18} height={18} />
     </button>
   );
 }
@@ -88,14 +88,13 @@ export function SiteNavbar() {
           <CurrentNavLinks />
         </Suspense>
 
-        <div className="flex items-center gap-1 sm:gap-3">
-          <ComingSoonIconButton label="Search">
-            <Search aria-hidden className="size-[18px]" />
-          </ComingSoonIconButton>
-          <ComingSoonIconButton label="Notifications">
-            <Bell aria-hidden className="size-[18px]" />
-          </ComingSoonIconButton>
-          <AccountMenu />
+        {/* 40px touch targets around 18px icons give the Figma 22px spacing. */}
+        <div className="flex items-center">
+          <ComingSoonIconButton label="Search" icon="search" />
+          <ComingSoonIconButton label="Notifications" icon="bell" />
+          <div className="ml-[11px]">
+            <AccountMenu />
+          </div>
         </div>
       </div>
     </header>
