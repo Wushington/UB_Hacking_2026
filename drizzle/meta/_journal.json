@@ -8,6 +8,13 @@
       "when": 1794088380078,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794099221635,
+      "tag": "0001_explanation_coaching",
+      "breakpoints": true
     }
   ]
 }

@@ -2,13 +2,14 @@ import "server-only";
 import { GoogleGenAI } from "@google/genai";
 import { parseEnv } from "@/lib/env";
 
+/** Default model for note/flashcard/feedback generation. Change here, not per call site. */
+export const GEMINI_MODEL = "gemini-3.8-flash";
+
 /**
- * Model for flashcard/audio/feedback generation, from GEMINI_MODEL (shared with src/ai-service).
- * Use this, not a model id per call site.
+ * Tried in order when the primary model is overloaded, rate-limited or hangs (newest models
+ * see demand spikes). Same family and capabilities (audio input, JSON schema output).
  */
-export function geminiModel(): string {
-  return parseEnv("gemini").GEMINI_MODEL;
-}
+export const GEMINI_FALLBACK_MODELS = ["gemini-3.6-flash", "gemini-3.5-flash"] as const;
 
 let client: GoogleGenAI | undefined;
 

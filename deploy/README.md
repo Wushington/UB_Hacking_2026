@@ -12,4 +12,6 @@ Not automated on purpose; deploys need team sign-off.
    `EnvironmentFile=` the `.env.local` so it gets `GEMINI_API_KEY`/`GEMINI_MODEL`). Keep it on 127.0.0.1
    and out of the Caddyfile; only Next.js calls it (`AI_SERVICE_URL=http://127.0.0.1:8000`).
 5. HTTPS: copy `deploy/Caddyfile` to `/etc/caddy/Caddyfile` with your domain and reload Caddy.
+   Then allow browser uploads from the domain: `npm run storage:cors https://<domain>`
+   (it keeps `http://localhost:3000` for local dev; re-running replaces the bucket's CORS rule).
 6. Database: run `npm run db:migrate` only after the team agrees the migration is safe for the shared database.
