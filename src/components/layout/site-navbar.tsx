@@ -13,7 +13,8 @@ type NavItem = { label: string; href?: string; also?: string[] };
 /** `href` is omitted for sections that don't have a page yet; they render as "Soon" labels, not dead links. */
 const NAV_ITEMS: NavItem[] = [
   { label: "Home", href: "/" },
-  { label: "My classes" },
+  // Capturing a class and its notes pages belong to My classes.
+  { label: "My classes", href: "/classes", also: ["/capture", "/lectures"] },
   { label: "Quizzes" },
   // Weak concepts are practised on the explain page; the full list stays reachable at /weak-concepts.
   { label: "Weak concepts", href: "/explain", also: ["/weak-concepts"] },

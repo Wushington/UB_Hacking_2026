@@ -52,13 +52,13 @@ describe("DashboardScreen", () => {
     expect(screen.getAllByText(/sign in/i).length).toBeGreaterThan(0);
   });
 
-  it("labels every control and marks unbuilt capture as coming soon", () => {
+  it("links photo capture and all classes, and marks unbuilt audio capture as coming soon", () => {
     render(<DashboardScreen view={fullView} />);
-    for (const name of [/upload whiteboard photo/i, /upload lecture audio/i]) {
-      const control = screen.getByRole("button", { name });
-      expect(control).toBeDisabled();
-      expect(control).toHaveAccessibleName(/coming soon/i);
-    }
+    expect(screen.getByRole("link", { name: /upload whiteboard photo/i })).toHaveAttribute("href", "/capture");
+    expect(screen.getByRole("link", { name: /view all classes/i })).toHaveAttribute("href", "/classes");
+    const audio = screen.getByRole("button", { name: /upload lecture audio/i });
+    expect(audio).toBeDisabled();
+    expect(audio).toHaveAccessibleName(/coming soon/i);
     for (const button of screen.getAllByRole("button")) expect(button).toHaveAccessibleName();
     for (const link of screen.getAllByRole("link")) expect(link).toHaveAccessibleName();
   });

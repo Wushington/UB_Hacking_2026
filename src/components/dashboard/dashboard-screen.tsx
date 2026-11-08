@@ -94,9 +94,9 @@ function Overview({ view }: { view: DashboardView }) {
             ))}
           </ul>
         )}
-        <span aria-disabled="true" title="Class pages are coming soon" className="inline-flex min-h-10 items-center gap-2 text-[12px] font-semibold text-orbit-muted">
-          View all classes <SoonBadge />
-        </span>
+        <Link href="/classes" className={textLink}>
+          View all classes <ChevronRight aria-hidden className="size-3.5" />
+        </Link>
       </div>
 
       <div className="hidden flex-col gap-2 px-3 text-[12px] leading-[1.7] text-orbit-muted xl:flex">
@@ -138,10 +138,22 @@ function Capture() {
         <p className="text-[12px] leading-[1.65] text-orbit-muted">Turn a whiteboard photo or lecture audio into clear, organized notes.</p>
       </div>
       <div className="flex flex-col gap-3 sm:flex-row">
-        <CaptureOption label="Upload whiteboard photo" formats="JPG, PNG or HEIC" icon={ScanLine} />
+        <Link
+          href="/capture"
+          className="flex min-w-0 flex-1 flex-col gap-[11px] rounded-xl border border-orbit-line bg-orbit-raised p-[17px] text-left transition-colors hover:border-orbit-accent/60"
+        >
+          <span className="flex w-full items-start justify-between">
+            <ScanLine aria-hidden className="size-[22px] text-orbit-accent-text" />
+            <ArrowUpRight aria-hidden className="size-4 text-orbit-muted" />
+          </span>
+          <span className="flex flex-col gap-1.5">
+            <span className="text-[14px] font-semibold text-orbit-text">Upload whiteboard photo</span>
+            <span className="text-[11px] text-orbit-muted">JPG, PNG or HEIC</span>
+          </span>
+        </Link>
         <CaptureOption label="Upload lecture audio" formats="MP3, M4A or WAV" icon={AudioLines} />
       </div>
-      <p className="text-[11px] text-orbit-muted">Capture is coming soon. You’ll choose which class each upload is saved to.</p>
+      <p className="text-[11px] text-orbit-muted">You’ll choose which class each upload is saved to. Lecture audio is coming soon.</p>
     </section>
   );
 }

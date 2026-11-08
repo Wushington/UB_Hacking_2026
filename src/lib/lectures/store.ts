@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { normalizeCategoryName } from "@/contracts/categories";
 import type { CreateLecture } from "@/contracts/lectures";
 import type { NoteSection, NotesUpdate } from "@/contracts/notes";
@@ -25,6 +25,33 @@ export async function listCategories(userId: string): Promise<CategoryOption[]> 
     .where(eq(categories.userId, userId))
     .orderBy(asc(categories.normalizedName))
     .limit(200);
+}
+
+export type LectureSummary = {
+  id: string;
+  title: string;
+  status: (typeof lectures.$inferSelect)["status"];
+  updatedAt: Date;
+  categoryId: string | null;
+  categoryName: string | null;
+};
+
+/** All of the user's lectures, most recently updated first, for the My classes page. */
+export async function listLectures(userId: string): Promise<LectureSummary[]> {
+  return getDb()
+    .select({
+      id: lectures.id,
+      title: lectures.title,
+      status: lectures.status,
+      updatedAt: lectures.updatedAt,
+      categoryId: lectures.categoryId,
+      categoryName: categories.name,
+    })
+    .from(lectures)
+    .leftJoin(categories, eq(categories.id, lectures.categoryId))
+    .where(eq(lectures.userId, userId))
+    .orderBy(desc(lectures.updatedAt))
+    .limit(500);
 }
 
 /** Creates a draft lecture. Returns null if a category id was given that the user doesn't own. */

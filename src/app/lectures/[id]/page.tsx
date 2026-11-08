@@ -1,15 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { z } from "zod";
 import { NotesEditor } from "@/components/notes/notes-editor";
-import { orbitCardClass, OrbitPageHeading, OrbitShell, Pill } from "@/components/orbit/shell";
+import { orbitCardClass, OrbitPageHeading, OrbitPage, Pill } from "@/components/orbit/shell";
 import { loadLectureForEditor } from "@/lib/lectures/store";
 
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
   title: "Your notes · Orbit Study",
@@ -110,12 +108,10 @@ async function LectureNotesContent({ params }: { params: PageProps<"/lectures/[i
 /** Step 02: review and edit the notes generated from a class's whiteboard photos. */
 export default function LectureNotesPage({ params }: PageProps<"/lectures/[id]">) {
   return (
-    <main className="flex flex-1 flex-col">
-      <OrbitShell activeNav="classes" activeStep={1} className={inter.className}>
-        <Suspense fallback={<OrbitPageHeading eyebrow="02 / ORGANIZE NOTES" title="Loading your notes…" />}>
-          <LectureNotesContent params={params} />
-        </Suspense>
-      </OrbitShell>
-    </main>
+    <OrbitPage>
+      <Suspense fallback={<OrbitPageHeading eyebrow="02 / ORGANIZE NOTES" title="Loading your notes…" />}>
+        <LectureNotesContent params={params} />
+      </Suspense>
+    </OrbitPage>
   );
 }

@@ -44,6 +44,9 @@ describe("SiteShell", () => {
     ["/", "Home"],
     ["/weak-concepts", "Weak concepts"],
     ["/explain", "Weak concepts"],
+    ["/classes", "My classes"],
+    ["/capture", "My classes"],
+    ["/lectures/abc", "My classes"],
   ])("marks the current section on %s", (pathname, label) => {
     renderShell(pathname);
     const main = screen.getByRole("navigation", { name: "Main" });
@@ -54,8 +57,9 @@ describe("SiteShell", () => {
   it("labels unbuilt sections and controls as coming soon instead of linking nowhere", () => {
     renderShell("/");
     const main = screen.getByRole("navigation", { name: "Main" });
-    expect(within(main).queryByRole("link", { name: /my classes|quizzes/i })).toBeNull();
-    expect(within(main).getByText("My classes").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
+    expect(within(main).queryByRole("link", { name: /quizzes/i })).toBeNull();
+    expect(within(main).getByText("Quizzes").closest("[aria-disabled]")).toHaveAttribute("aria-disabled", "true");
+    expect(within(main).getByRole("link", { name: "My classes" })).toHaveAttribute("href", "/classes");
     for (const name of [/search/i, /notifications/i]) {
       const control = screen.getByRole("button", { name });
       expect(control).toBeDisabled();
@@ -74,5 +78,16 @@ describe("SiteShell", () => {
       "05  /  Explain & improve",
     ]);
     expect(within(loop).getByText("Explain & improve", { exact: false }).closest("li")).toHaveAttribute("aria-current", "step");
+  });
+
+  it.each([
+    ["/capture", "Capture a class"],
+    ["/lectures/abc", "Organize notes"],
+    ["/lectures/abc/study", "Take a quiz"],
+  ])("highlights the learning-loop step for %s", (pathname, step) => {
+    renderShell(pathname);
+    const loop = within(screen.getByRole("contentinfo")).getByRole("list", { name: /learning loop/i });
+    const current = within(loop).getAllByRole("listitem").filter((li) => li.getAttribute("aria-current") === "step");
+    expect(current.map((li) => li.textContent)).toEqual([expect.stringContaining(step)]);
   });
 });
