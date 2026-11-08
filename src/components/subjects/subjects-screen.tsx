@@ -32,7 +32,7 @@ export function SubjectsScreen({ lectures, signedIn }: { lectures: SubjectLectur
           signedIn ? (
             <Link href="/capture" className={captureButton}>
               <Plus aria-hidden className="size-[18px]" />
-              Capture a subject
+              Capture notes
             </Link>
           ) : null
         }

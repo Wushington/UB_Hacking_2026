@@ -27,7 +27,7 @@ function Message({ title, children }: { title: string; children: ReactNode }) {
 
 const captureLink = (
   <Link href="/capture" className={`${linkButtonClass} self-start bg-[#ff5e7a] text-white hover:bg-[#ff7891]`}>
-    Capture a subject
+    Capture notes
   </Link>
 );
 

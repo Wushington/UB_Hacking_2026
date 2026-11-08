@@ -23,7 +23,7 @@ describe("SubjectsScreen", () => {
     const none = screen.getByRole("region", { name: "No subject" });
     expect(within(none).getByText("Needs another try")).toBeInTheDocument();
     expect(within(none).queryByRole("link", { name: "Flashcards" })).toBeNull();
-    expect(screen.getByRole("link", { name: /capture a subject/i })).toHaveAttribute("href", "/capture");
+    expect(screen.getByRole("link", { name: /capture notes/i })).toHaveAttribute("href", "/capture");
   });
 
   it("shows an empty state, and a sign-in prompt when signed out", () => {
@@ -32,6 +32,6 @@ describe("SubjectsScreen", () => {
     unmount();
     render(<SubjectsScreen signedIn={false} lectures={[]} />);
     expect(screen.getByText(/sign in to see your subjects/i)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /capture a subject/i })).toBeNull();
+    expect(screen.queryByRole("link", { name: /capture notes/i })).toBeNull();
   });
 });
