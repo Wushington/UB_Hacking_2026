@@ -25,6 +25,14 @@ describe("missed flashcards → weak concepts", () => {
     expect(concepts[0]).toMatchObject({ missedCount: 2, lastSeenAt: T2 });
   });
 
+  it("reopens a resolved concept when its card is missed again", async () => {
+    const { writer, concepts } = memoryWriter();
+    await recordWeakConceptEvents(writer, USER, missedReviewEvents([review(REVIEW_1, "missed")]));
+    concepts[0].resolvedAt = T1; // resolved after a sound explanation rated 1–3
+    await recordWeakConceptEvents(writer, USER, missedReviewEvents([{ ...review(REVIEW_3, "missed"), reviewedAt: T2 }]));
+    expect(concepts[0]).toMatchObject({ missedCount: 2, resolvedAt: null });
+  });
+
   it("never counts a duplicated submission of the same review event twice", async () => {
     const { writer, concepts } = memoryWriter();
     const events = missedReviewEvents([review(REVIEW_1, "missed")]);

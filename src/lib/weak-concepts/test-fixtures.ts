@@ -9,7 +9,7 @@ export const REVIEW_1 = "55555555-5555-4555-8555-555555555501";
 export const REVIEW_2 = "55555555-5555-4555-8555-555555555502";
 export const REVIEW_3 = "55555555-5555-4555-8555-555555555503";
 
-type Row = { id: string; userId: string; lectureId: string; conceptKey: string; label: string; missedCount: number; feedbackCount: number; lastSeenAt: Date };
+type Row = { id: string; userId: string; lectureId: string; conceptKey: string; label: string; missedCount: number; feedbackCount: number; lastSeenAt: Date; resolvedAt: Date | null };
 
 /**
  * In-memory stand-in for the weak_concepts + weak_concept_sources tables, enforcing the same unique
@@ -22,7 +22,7 @@ export function memoryWriter() {
     async ensureConcept(userId, lectureId, conceptKey, label, seenAt) {
       const found = concepts.find((c) => c.userId === userId && c.lectureId === lectureId && c.conceptKey === conceptKey);
       if (found) return found.id;
-      const row = { id: `concept-${concepts.length + 1}`, userId, lectureId, conceptKey, label, missedCount: 0, feedbackCount: 0, lastSeenAt: seenAt };
+      const row = { id: `concept-${concepts.length + 1}`, userId, lectureId, conceptKey, label, missedCount: 0, feedbackCount: 0, lastSeenAt: seenAt, resolvedAt: null };
       concepts.push(row);
       return row.id;
     },
@@ -38,6 +38,7 @@ export function memoryWriter() {
       else row.feedbackCount++;
       row.label = label;
       if (seenAt > row.lastSeenAt) row.lastSeenAt = seenAt;
+      row.resolvedAt = null;
     },
   };
   return { writer, concepts };

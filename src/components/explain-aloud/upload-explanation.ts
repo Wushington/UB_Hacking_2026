@@ -30,7 +30,14 @@ const postJson = (fetchImpl: typeof fetch, url: string, body: PrepareUpload | Fi
  * Returns the new audio_recordings id. Errors carry a message that's safe to show the student.
  */
 export async function uploadExplanation(
-  input: { blob: Blob; mimeType: AudioMimeType; lectureId: string; durationMs: number },
+  input: {
+    blob: Blob;
+    mimeType: AudioMimeType;
+    lectureId: string;
+    durationMs: number;
+    /** The open weak concept being explained; omitted for a free explanation of the whole class. */
+    conceptKey?: string;
+  },
   fetchImpl: typeof fetch = fetch,
 ): Promise<string> {
   const prepared = await postJson(fetchImpl, "/api/uploads/prepare", {
@@ -55,6 +62,7 @@ export async function uploadExplanation(
     purpose: "explanation_audio",
     lectureId: input.lectureId,
     durationMs: Math.max(1, Math.round(input.durationMs)),
+    ...(input.conceptKey ? { conceptKey: input.conceptKey } : {}),
   });
   if (!finalized.ok) throw new UploadError(await serverMessage(finalized, "Couldn’t save your recording. Please try again."));
   return finalizeUploadResponseSchema.parse(await finalized.json()).id;

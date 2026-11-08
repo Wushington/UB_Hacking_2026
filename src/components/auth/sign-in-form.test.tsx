@@ -60,12 +60,12 @@ describe("custom Clerk authentication", () => {
   it("starts Google OAuth with the local callback", async () => {
     render(<SignInForm />);
     await userEvent.click(screen.getByRole("button", { name: /continue with google/i }));
-    expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_google", redirectCallbackUrl: "/sso-callback", redirectUrl: "/home" });
+    expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_google", redirectCallbackUrl: "/sso-callback", redirectUrl: "/" });
   });
   it("starts GitHub OAuth with the local callback", async () => {
     render(<SignInForm />);
     await userEvent.click(screen.getByRole("button", { name: /continue with github/i }));
-    expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_github", redirectCallbackUrl: "/sso-callback", redirectUrl: "/home" });
+    expect(mocks.sso).toHaveBeenCalledWith({ strategy: "oauth_github", redirectCallbackUrl: "/sso-callback", redirectUrl: "/" });
   });
   it.each(["needs_second_factor", "needs_client_trust", "needs_first_factor"])("continues Google verification when Clerk returns %s without redirecting", async (status) => {
     mocks.state.status = status;

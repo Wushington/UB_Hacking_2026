@@ -44,6 +44,15 @@ describe("Weak concepts list", () => {
     expect(within(item).queryByText(/missed card/)).not.toBeInTheDocument();
   });
 
+  it("lets the student pick any weak concept to explain out loud", () => {
+    render(<WeakConceptsList concepts={[base, recordingOnly]} />);
+    // Every concept (flashcard-based or recording-only) gets its own link, in list order.
+    expect(screen.getAllByRole("link", { name: "Explain it out loud" }).map((a) => a.getAttribute("href"))).toEqual([
+      `/explain?concept=${base.id}`,
+      `/explain?concept=${recordingOnly.id}`,
+    ]);
+  });
+
   it("keeps the given order (most recent first)", () => {
     render(<WeakConceptsList concepts={[recordingOnly, base]} />);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual(["ATP yield", "Glycolysis · Location"]);

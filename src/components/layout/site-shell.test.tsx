@@ -25,6 +25,17 @@ describe("SiteShell", () => {
     nav.pathname = "/";
   });
 
+  it.each(["/sign-in", "/sign-up/verify-email-address", "/forgot-password", "/sso-callback", "/auth/factor-one"])(
+    "leaves %s to the sign-in design: no site navbar, footer or star field",
+    (pathname) => {
+      const { container } = renderShell(pathname);
+      expect(within(screen.getByRole("main")).getByText("Page content")).toBeInTheDocument();
+      expect(screen.queryByRole("banner")).toBeNull();
+      expect(screen.queryByRole("contentinfo")).toBeNull();
+      expect(container.querySelectorAll("[data-star]")).toHaveLength(0);
+    },
+  );
+
   it("wraps every page in one navbar, main region, footer and starry background", () => {
     const { container } = renderShell("/");
     expect(screen.getAllByRole("banner")).toHaveLength(1);

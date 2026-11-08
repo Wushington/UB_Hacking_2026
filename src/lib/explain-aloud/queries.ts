@@ -1,11 +1,46 @@
 import "server-only";
-import { and, asc, count, desc, eq, lte } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { presignDownload } from "@/lib/storage";
-import { emptyView, toExplainAloudView, type ExplainAloudView } from "./view";
+import { emptyView, toExplainAloudView, type ConceptOption, type ExplainAloudView, type SelectedConcept } from "./view";
 
-const { audioRecordings, lectures, categories, explanationFeedback, explanationWeakPoints, transcriptSegments } = schema;
+const { audioRecordings, lectures, categories, explanationFeedback, explanationWeakPoints, transcriptSegments, weakConcepts } =
+  schema;
+
+/** The user's open weak concepts across their classes, most recent first, for the recorder's picker. */
+export async function getOpenConceptOptions(userId: string): Promise<ConceptOption[]> {
+  return getDb()
+    .select({ id: weakConcepts.id, conceptKey: weakConcepts.conceptKey, label: weakConcepts.label, lectureId: weakConcepts.lectureId })
+    .from(weakConcepts)
+    .innerJoin(lectures, and(eq(lectures.id, weakConcepts.lectureId), eq(lectures.userId, userId)))
+    .where(and(eq(weakConcepts.userId, userId), isNull(weakConcepts.resolvedAt)))
+    .orderBy(desc(weakConcepts.lastSeenAt))
+    .limit(200);
+}
+
+/**
+ * A weak concept the student picked (e.g. "Explain it out loud" on the Weak concepts page), with its
+ * class. Null for a malformed id, someone else's concept, or one that's already resolved.
+ */
+export async function getSelectedConcept(userId: string, weakConceptId: string): Promise<SelectedConcept | null> {
+  const id = z.uuid().safeParse(weakConceptId).data;
+  if (!id) return null;
+  const [row] = await getDb()
+    .select({
+      conceptKey: weakConcepts.conceptKey,
+      label: weakConcepts.label,
+      lectureId: weakConcepts.lectureId,
+      lectureTitle: lectures.title,
+      categoryName: categories.name,
+    })
+    .from(weakConcepts)
+    .innerJoin(lectures, and(eq(lectures.id, weakConcepts.lectureId), eq(lectures.userId, userId)))
+    .leftJoin(categories, eq(categories.id, lectures.categoryId))
+    .where(and(eq(weakConcepts.id, id), eq(weakConcepts.userId, userId), isNull(weakConcepts.resolvedAt)))
+    .limit(1);
+  return row ?? null;
+}
 
 /** The user's classes, most recently updated first, for the recorder's class picker. */
 export async function getLectureOptions(userId: string): Promise<{ id: string; title: string }[]> {
@@ -70,6 +105,8 @@ export async function getExplainAloudView(userId: string, recordingId?: string):
       summary: explanationFeedback.summary,
       coveredIdeas: explanationFeedback.coveredIdeas,
       nextStep: explanationFeedback.nextStep,
+      masteredConcepts: explanationFeedback.masteredConcepts,
+      selfRating: explanationFeedback.selfRating,
     })
     .from(explanationFeedback)
     .where(and(eq(explanationFeedback.recordingId, recording.id), eq(explanationFeedback.userId, userId)))

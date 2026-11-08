@@ -62,5 +62,8 @@ describe("upload keys and finalize contract", () => {
     expect(finalizeUploadSchema.safeParse({ uploadId, purpose: "explanation_audio" }).success).toBe(true);
     expect(finalizeUploadSchema.safeParse({ uploadId }).success).toBe(false);
     expect(finalizeUploadSchema.safeParse({ uploadId: "../other-user", purpose: "explanation_audio" }).success).toBe(false);
+    // Optional chosen weak concept.
+    expect(finalizeUploadSchema.parse({ uploadId, purpose: "explanation_audio", conceptKey: "atp-synthase" }).conceptKey).toBe("atp-synthase");
+    expect(finalizeUploadSchema.safeParse({ uploadId, purpose: "explanation_audio", conceptKey: "  " }).success).toBe(false);
   });
 });

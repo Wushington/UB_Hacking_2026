@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { emptyView, type ExplainAloudView } from "@/lib/explain-aloud/view";
+import { emptyView, readyToRecordView, type ExplainAloudView } from "@/lib/explain-aloud/view";
 import { ExplainAloudScreen } from "./explain-aloud-screen";
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
@@ -15,11 +15,13 @@ const readyView: ExplainAloudView = {
   state: "ready",
   recordingId: "7d1f3c1e-2b8a-4c3e-9f4a-1a2b3c4d5e6f",
   lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c",
+  conceptKey: null,
   course: "Biology",
   concept: {
     title: "Cellular respiration",
     breadcrumb: "Biology · Cellular respiration",
     prompt: null,
+    instruction: null,
     attemptLabel: "Attempt 2 · Complete",
   },
   recording: { durationSeconds: 48, audioSrc: null },
@@ -30,6 +32,8 @@ const readyView: ExplainAloudView = {
     covered: [],
     gaps: [{ title: "Role of oxygen", detail: "Oxygen is the final electron acceptor." }],
     nextStep: null,
+    mastered: [],
+    selfRating: null,
   },
 };
 
@@ -99,6 +103,44 @@ describe("ExplainAloudScreen", () => {
     expect(screen.getByRole("status", { name: "Loading your explanation…" })).toBeInTheDocument();
     expect(screen.getByRole("status", { name: "Loading…" })).toBeInTheDocument();
     expect(screen.getByText("Loading your feedback…")).toBeInTheDocument();
+  });
+
+  it("asks for a self-rating only when the attempt mastered an open weak concept", () => {
+    const mastered = [{ conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role" }];
+    const { rerender } = render(<ExplainAloudScreen view={readyView} />);
+    expect(screen.queryByRole("region", { name: "Rate your explanation" })).not.toBeInTheDocument();
+
+    rerender(<ExplainAloudScreen view={{ ...readyView, feedback: { ...readyView.feedback!, mastered } }} />);
+    expect(screen.getByRole("region", { name: "Rate your explanation" })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup")).toBeInTheDocument();
+
+    rerender(<ExplainAloudScreen view={{ ...readyView, state: "processing", feedback: { ...readyView.feedback!, mastered } }} />);
+    expect(screen.queryByRole("region", { name: "Rate your explanation" })).not.toBeInTheDocument();
+  });
+
+  it("sets up a new attempt on a weak concept picked from the Weak concepts page", () => {
+    const view = readyToRecordView({
+      conceptKey: "oxygen-final-electron-acceptor",
+      label: "Give oxygen its specific role",
+      lectureId: "0b6f5c2a-9d3e-4f1a-8c7b-2e1d0f9a8b7c",
+      lectureTitle: "Cellular respiration",
+      categoryName: "Biology",
+    });
+    const { container } = render(
+      <ExplainAloudScreen
+        view={view}
+        lectures={[{ id: view.lectureId!, title: "Cellular respiration" }]}
+        concepts={[{ id: "c1", conceptKey: "oxygen-final-electron-acceptor", label: "Give oxygen its specific role", lectureId: view.lectureId! }]}
+      />,
+    );
+    expect(screen.getByRole("heading", { level: 1, name: "Explain it out loud." })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Give oxygen its specific role" })).toBeInTheDocument();
+    expect(screen.getByText("Biology · Cellular respiration")).toBeInTheDocument();
+    expect(screen.getByText(/explain this in your own words/i)).toBeInTheDocument();
+    // Nothing recorded yet: no player, and the button starts a first attempt.
+    expect(screen.queryByRole("button", { name: /play recording/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /record an explanation/i })).toBeEnabled();
+    for (const filler of FIGMA_FILLER) expect(container.textContent).not.toMatch(filler);
   });
 
   it("drops the analyzing indicators once feedback is ready", () => {

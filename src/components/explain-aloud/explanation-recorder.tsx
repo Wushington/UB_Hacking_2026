@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { MAX_RECORDING_MS } from "@/contracts/audio";
 import { MAX_UPLOAD_BYTES } from "@/contracts/uploads";
 import { baseAudioMimeType, formatClock, pickRecorderMimeType, type AudioMimeType } from "@/lib/recording";
+import type { ConceptOption } from "@/lib/explain-aloud/view";
 import { cn } from "@/lib/utils";
 import { uploadExplanation, UploadError } from "./upload-explanation";
 
@@ -42,13 +43,19 @@ function micErrorMessage(error: unknown) {
  */
 export function ExplanationRecorder({
   lectures,
+  concepts = [],
   defaultLectureId,
+  defaultConceptKey = null,
   disabled,
   hasAttempt,
   backHref,
 }: {
   lectures: LectureOption[];
+  /** The user's open weak concepts (all classes); the picker shows those in the chosen class. */
+  concepts?: ConceptOption[];
   defaultLectureId: string | null;
+  /** Concept of the current attempt or the one selected on the Weak concepts page. */
+  defaultConceptKey?: string | null;
   disabled: boolean;
   hasAttempt: boolean;
   backHref: string;
@@ -65,6 +72,12 @@ export function ExplanationRecorder({
   const [lectureId, setLectureId] = useState<string>(
     defaultLectureId && lectures.some((l) => l.id === defaultLectureId) ? defaultLectureId : (lectures[0]?.id ?? ""),
   );
+  /** "" = a free explanation of the whole class. */
+  const [conceptKey, setConceptKey] = useState<string>(
+    defaultConceptKey && concepts.some((c) => c.lectureId === lectureId && c.conceptKey === defaultConceptKey)
+      ? defaultConceptKey
+      : "",
+  );
 
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -77,6 +90,14 @@ export function ExplanationRecorder({
 
   const lecture = lectures.find((l) => l.id === lectureId) ?? null;
   const noClasses = lectures.length === 0;
+  const classConcepts = concepts.filter((c) => c.lectureId === lectureId);
+  const concept = classConcepts.find((c) => c.conceptKey === conceptKey) ?? null;
+
+  function chooseLecture(id: string) {
+    setLectureId(id);
+    // Concepts belong to a class; keep the choice only if it exists in the new class.
+    if (!concepts.some((c) => c.lectureId === id && c.conceptKey === conceptKey)) setConceptKey("");
+  }
 
   function stopMeters() {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
@@ -163,7 +184,7 @@ export function ExplanationRecorder({
     } catch (e) {
       if (attempt !== attemptRef.current) return;
       setError(micErrorMessage(e));
-      setPhase(lectures.length > 1 ? "setup" : "idle");
+      setPhase(lectures.length > 1 || classConcepts.length > 0 ? "setup" : "idle");
       return;
     }
     if (attempt !== attemptRef.current) {
@@ -230,7 +251,13 @@ export function ExplanationRecorder({
     setError(null);
     setPhase("uploading");
     try {
-      const id = await uploadExplanation({ blob: take.blob, mimeType: take.mimeType, lectureId, durationMs: take.durationMs });
+      const id = await uploadExplanation({
+        blob: take.blob,
+        mimeType: take.mimeType,
+        lectureId,
+        durationMs: take.durationMs,
+        conceptKey: concept?.conceptKey,
+      });
       clearTake();
       // Stay in "opening" until the new attempt has rendered (see the effect below).
       setPhase("opening");
@@ -246,8 +273,11 @@ export function ExplanationRecorder({
 
   function onRecordClick() {
     setError(null);
-    // Ask which class only when it isn't obvious from the current attempt.
-    if (lectures.length > 1 && !(defaultLectureId && lectures.some((l) => l.id === defaultLectureId))) {
+    // Ask first unless it's obvious: the class from the current attempt, and either a concept
+    // already chosen (current attempt / Weak concepts page) or no open concepts to choose from.
+    const classKnown = lectures.length === 1 || Boolean(defaultLectureId && lectures.some((l) => l.id === defaultLectureId));
+    const conceptKnown = concept !== null || classConcepts.length === 0;
+    if (!classKnown || !conceptKnown) {
       setPhase("setup");
     } else {
       void startRecording();
@@ -312,22 +342,51 @@ export function ExplanationRecorder({
           </div>
 
           {phase === "setup" ? (
-            <label className="flex flex-col gap-1.5 text-[12px] leading-[1.5] text-[#9496bf]">
-              Which class is this for?
-              <select
-                value={lectureId}
-                onChange={(e) => setLectureId(e.target.value)}
-                className="h-[42px] rounded-[10px] border border-[#333564] bg-[#0d0e2a] px-3 text-[14px] text-white"
-              >
-                {lectures.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.title}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="flex flex-col gap-3">
+              {lectures.length > 1 ? (
+                <label className="flex flex-col gap-1.5 text-[12px] leading-[1.5] text-[#9496bf]">
+                  Which class is this for?
+                  <select
+                    value={lectureId}
+                    onChange={(e) => chooseLecture(e.target.value)}
+                    className="h-[42px] rounded-[10px] border border-[#333564] bg-[#0d0e2a] px-3 text-[14px] text-white"
+                  >
+                    {lectures.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {classConcepts.length > 0 ? (
+                <label className="flex flex-col gap-1.5 text-[12px] leading-[1.5] text-[#9496bf]">
+                  Which concept will you explain?
+                  <select
+                    value={conceptKey}
+                    onChange={(e) => setConceptKey(e.target.value)}
+                    className="h-[42px] rounded-[10px] border border-[#333564] bg-[#0d0e2a] px-3 text-[14px] text-white"
+                  >
+                    {classConcepts.map((c) => (
+                      <option key={c.id} value={c.conceptKey}>
+                        {c.label}
+                      </option>
+                    ))}
+                    <option value="">Whole class (free explanation)</option>
+                  </select>
+                </label>
+              ) : null}
+            </div>
           ) : lecture ? (
-            <p className="text-[12px] leading-[1.5] text-[#9496bf]">For {lecture.title}</p>
+            <p className="text-[12px] leading-[1.5] text-[#9496bf]">
+              {concept ? (
+                <>
+                  Explaining <span className="font-medium text-[#e8e6ff]">{concept.label}</span> · {lecture.title}
+                </>
+              ) : (
+                <>For {lecture.title}</>
+              )}
+            </p>
           ) : null}
 
           {phase === "requesting" ? (
