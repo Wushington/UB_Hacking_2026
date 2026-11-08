@@ -1,14 +1,16 @@
-import { isValidElement, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
 import { emptyDashboard } from "@/lib/dashboard/view";
 import HomePage from "./page";
 
 const mocks = vi.hoisted(() => ({
+  redirect: vi.fn(() => { throw new Error("NEXT_REDIRECT"); }),
   auth: vi.fn(),
   currentUser: vi.fn(),
   getDashboardView: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@clerk/nextjs/server", () => ({ auth: mocks.auth, currentUser: mocks.currentUser }));
 vi.mock("@/lib/dashboard/queries", () => ({ getDashboardView: mocks.getDashboardView }));
 
@@ -16,18 +18,17 @@ vi.mock("@/lib/dashboard/queries", () => ({ getDashboardView: mocks.getDashboard
 async function resolveDashboard() {
   const page = HomePage() as ReactElement<{ children: ReactElement }>;
   const dashboard = page.props.children;
-  const render = dashboard.type as () => Promise<ReactElement<{ view: unknown }>>;
+  const render = dashboard.type as () => Promise<ReactElement<{ children: ReactElement<{ view: unknown }> }>>;
   return render();
 }
 
 describe("root page (/)", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("shows the signed-out dashboard, not the sign-in form", async () => {
+  it("sends signed-out visitors to the sign-up flow", async () => {
     mocks.auth.mockResolvedValue({ userId: null });
-    const element = await resolveDashboard();
-    expect(isValidElement(element) && element.type).toBe(DashboardScreen);
-    expect(element.props.view).toEqual(emptyDashboard(false));
+    await expect(resolveDashboard()).rejects.toThrow("NEXT_REDIRECT");
+    expect(mocks.redirect).toHaveBeenCalledWith("/sign-up");
     expect(mocks.getDashboardView).not.toHaveBeenCalled();
   });
 
@@ -37,8 +38,8 @@ describe("root page (/)", () => {
     mocks.currentUser.mockResolvedValue({ firstName: " Ada " });
     mocks.getDashboardView.mockResolvedValue(view);
     const element = await resolveDashboard();
-    expect(element.type).toBe(DashboardScreen);
+    expect(element.props.children.type).toBe(DashboardScreen);
     expect(mocks.getDashboardView).toHaveBeenCalledWith("user_1", "Ada");
-    expect(element.props.view).toBe(view);
+    expect(element.props.children.props.view).toBe(view);
   });
 });

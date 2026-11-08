@@ -7,12 +7,12 @@ export function DesignIcon({ name }: { name: string }) {
   return <img src={`/orbit/${name}.svg`} alt="" aria-hidden="true" />;
 }
 
-export function AuthShell({ children }: { children: ReactNode }) {
+export function AuthShell({ children, salmon = false, showBackToHome = true }: { children: ReactNode; salmon?: boolean; showBackToHome?: boolean }) {
   return (
-    <div className="orbit-auth">
+    <div className={`orbit-auth${salmon ? " orbit-auth-salmon" : ""}`}>
       <header className="orbit-nav">
-        <Link href="/" className="orbit-brand"><DesignIcon name="orbit" />Orbit Study</Link>
-        <Link href="/" className="orbit-home"><DesignIcon name="arrow-left" />Back to home</Link>
+        <Link href="/" className="orbit-brand">{salmon ? <img src="/brand/orbit-study-logo.svg" alt="" aria-hidden="true" width="48" height="28" /> : <DesignIcon name="orbit" />}Orbit Study</Link>
+        {showBackToHome && <Link href="/" className="orbit-home"><DesignIcon name="arrow-left" />Back to home</Link>}
       </header>
       <div className="orbit-content">
         {children}
